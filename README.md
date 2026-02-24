@@ -16,8 +16,8 @@ The gut microbiome is closely related to host health and plays a major role in h
 * Numpy 2.4.2
 * Matplotlib 3.10.8
 * R version 4.5.1
-* phyloseq_1.52.0
-* vegan_2.7-2
-* compositions_2.0-9
-* Hotelling_1.0-8
+* phyloseq 1.52.0
+* vegan 2.7-2
+* compositions 2.0-9
+* Hotelling 1.0-8
 
