@@ -4,8 +4,8 @@
 averageEnrichment_spectralCount_visualization.py
 
 Purpose: 
-    visualize the relationship between spectral count and average enrichment for significantly labeled genera
-    this visualization can be used to distinguish between putative resource specialists and generalists
+    Visualize the relationship between spectral count and average enrichment for significantly labeled genera.
+    This visualization can be used to distinguish between putative resource specialists and generalists.
 
 Inputs:
     - Percolator output (TSV) with all SIP labeled PSMs
@@ -346,7 +346,7 @@ def main():
     args = parser.parse_args()
 
     colormap = LinearSegmentedColormap.from_list("colorList", ["gold", "orange", "crimson"])
-    sipData = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = ['PSMId', 'MS1IsotopicAbundances', 'MS2IsotopicAbundances', 'Proteins', 'FileName'])
+    sipData = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = [0, 17, 18, 25, 26])
     sigLabeledTaxa = pd.read_csv(args.sigtaxa, names=['Taxon'])
 
     dataParser = parseSIPData(sipData)
