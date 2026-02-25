@@ -56,7 +56,7 @@ class parseSIPData():
 
         Parameters
         ----------
-        namesDictIn : file path to CSV
+        namesDictIn : file path
             CSV file contains lookup table to convert MS/MS file name --> experimental sample name 
 
         Returns 
