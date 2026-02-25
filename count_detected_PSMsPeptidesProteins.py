@@ -7,6 +7,7 @@ Purpose:
 
 Inputs:
     - Percolator output (TSV)
+    - File names --> sample names lookup table (CSV)
 
 Outputs:
     - Table with counts of labeled PSMs, peptides, and proteins in CSV format
@@ -117,7 +118,7 @@ def main():
     parser.add_argument('-o', '--outFile')
     args = parser.parse_args()
 
-    sipData = pd.read_csv(args.inFile, sep = '\t', usecols = ['PSMId', 'MS1IsotopicAbundances', 'MS2IsotopicAbundances', 'Peptide', 'Proteins', 'FileName'])
+    sipData = pd.read_csv(args.inFile, sep = '\t', usecols = [0, 24, 25, 26])
     
     counter = countDetected(sipData)
     groupLookupDict, orderLookupDict = counter.sampleMetadata(args.sampleNames)
