@@ -1,4 +1,32 @@
 #!/usr/bin/env python3
+
+"""
+averageEnrichment_spectralCount_visualization.py
+
+Purpose: 
+    visualize the relationship between spectral count and average enrichment for significantly labeled genera
+    this visualization can be used to distinguish between putative resource specialists and generalists
+
+Inputs:
+    - Percolator output (TSV) with all SIP labeled PSMs
+    - File names --> sample names lookup table (CSV)
+    - MGYG proteome metadata with taxon IDs --> taxon lineage 
+    - List of significantly labeled taxa as defined by null distributions
+
+Outputs: 
+    - Average enrichment x Spectral count bubble plot
+
+Usage: 
+    python averageEnrichment_spectralCount_visualization.py \
+        -i second_search/SIP2_filtered_psms.tsv \
+        -n sample_dict.csv -m magnify_mouse_genomes-all_metadata.tsv \
+        -t Significantly_Labeled_Taxa.csv
+
+Notes:
+    [insert justification for thresholds]
+    
+"""
+
 import pandas as pd
 import numpy as np
 import argparse
@@ -8,11 +36,40 @@ from matplotlib.cm import ScalarMappable
 
 
 class parseSIPData():
+    """
+    Parses Percolator output into dataframe that can be plotted
+
+    This class integrates sample name metadata, genus name metadata, and SIP-labeled PSMs
+    into a datastructure that can be represented as a bubble plot.
+
+    Attributes: 
+        SIPdf (pandas.DataFrame): percolator output file data
+    """
 
     def __init__(self, SIPdf):
         self.SIPdf = SIPdf
 
     def sampleMetadata(self, namesDictIn):
+        """
+        Generate lookup dictionaries containing metadata for all samples
+
+        Parameters
+        ----------
+        namesDictIn : file path to CSV
+            CSV file contains lookup table to convert MS/MS file name --> experimental sample name 
+
+        Returns 
+        -------
+        groupDict : dict
+            Dictionary to convert MS/MS file name to treatment group ID
+        
+        sampStatDict : dict 
+            Dictionary to lookup if sample is unlabeled or labeled 
+
+        Notes
+        -----
+        Samples from this experiment are named like [Sample type][Time point].[Replicate]    
+        """
         sampleLookup = pd.read_csv(namesDictIn)
         sampleLookupDict = sampleLookup.to_dict(orient = 'index')
         groupDict = {}
@@ -27,6 +84,30 @@ class parseSIPData():
         return groupDict, sampStatDict
 
     def parseInFile(self, treatmentGroupDict, statDict):
+        """
+        Parse Percolator output into 2 DataFrames with spectral count data or average enrichment data
+
+        Parameters
+        ----------
+        SIPdf : pandas.DataFrame
+            DataFrame containing labeled PSMs, including their enrichment values
+
+        Returns
+        -------
+        t_avgEnrichmentDf : pandas.DataFrame
+            DataFrame containing average enrichment values, summarized at the protein level
+            Columns are samples, index contains protein IDs
+
+        t_spectralCountDf : pandas.DataFrame
+            DataFrame containing spectral counts, summarized at the protein level
+            Columns are samples, index contains protein IDs
+        
+        Notes
+        -----
+        Including degenerate proteins - uses first degenerate entry in list of possible protein matches
+        Only includes microbial PSMs
+        Excludes all unlabeled samples    
+        """
         enrichData = []
         countData = []
         for psm, enrich, ms2, protein, sample in self.SIPdf.itertuples(index = False):
@@ -40,27 +121,65 @@ class parseSIPData():
                     enrichData.append([splitProtein, treatment, enrich])
 
         enrichDataDf = pd.DataFrame(enrichData).rename(columns = {0: 'Protein', 1: 'Sample', 2: 'Enrichment'})
+        ### Get average enrichment of each protein
         t_avgEnrichmentDf = pd.pivot_table(enrichDataDf, index = 'Protein', columns = 'Sample', values = ['Enrichment'], aggfunc = 'mean').fillna(0)
 
         abundDataDf = pd.DataFrame(countData).rename(columns = {0: 'Protein', 1: 'Sample'})
+        ### Assume each row in SIPdf represents 1 PSM
         spectralCountDf = pd.DataFrame(abundDataDf.groupby(['Sample', 'Protein']).size())
+        ### Get sum of spectral counts for each protein
         t_spectralCountDf = pd.pivot_table(spectralCountDf, index = 'Protein', columns = 'Sample', aggfunc = 'sum').fillna(0)
-
         return t_spectralCountDf, t_avgEnrichmentDf
 
     def parseMGYGData(self, metadata):
+        """
+        Parse MGYG metadata file into dictionary that can be used to retrieve genus names for each taxon ID
+
+        Parameters
+        ----------
+        namesDictIn : file path to MGYG metadata CSV
+            CSV file contains many fields, here we only read in the taxon ID and full lineage with taxon names
+
+        Returns 
+        -------
+        lineageDict : dict 
+            Lookup dict to get genus name for each taxon ID
+        """
         metadataDf = pd.read_csv(metadata, sep = '\t', header = 0, usecols = ['Genome', 'Lineage'])
         lineageDict = {}
         for isolate, lineage in metadataDf.itertuples(index = False):
             splitLineage = lineage.split(';')
+            ### splitLineage is a list that can be indexed to get any taxonomic rank in the lineage
+            ### Index 5 corresponds to genera 
             lineageDict[isolate] = splitLineage[5]
         return lineageDict
 
     def insertTaxonomy(self, df, dataType, taxonomyDict):
+        """
+        Insert taxon names into average enrichment and spectral count DataFrames
+
+        Parameters
+        ----------
+        df : pandas.DataFrame 
+            Average enrichment or spectral count dataframe where columns are samples and indices are protein IDs
+
+        dataType: str
+            Indicates if aggfunc used to summarize data at the taxon level should be 
+            mean (average enrichement) or sum (spectral counts)
+
+        taxonomyDict : dict
+            Lookup dict with taxon IDs --> genus names ouput by parseMGYGData()
+
+        Returns 
+        -------
+        gb : pandas.DataFrame
+            DataFrame with average enrichment or spectral count values summarized at the taxon level
+        """
         taxonomyData = {}
         for proteinID, sampleData in df.iterrows():
             taxonID = proteinID.split('_')[0]
             taxon = taxonomyDict.get(taxonID)
+            ### Need to generate a dictionary that contains protein IDs --> genus names
             taxonomyData[proteinID] = taxon 
         df = df.reset_index()
         df['Taxon'] = df['Protein'].map(taxonomyData)
