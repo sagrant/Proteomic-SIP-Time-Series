@@ -11,16 +11,17 @@ Inputs:
     - Percolator output (TSV) with all SIP labeled PSMs
     - File names --> sample names lookup table (CSV)
     - MGYG proteome metadata with taxon IDs --> taxon lineage 
-    - List of significantly labeled taxa as defined by null distributions
+    - CSV containing significantly labeled taxa as defined by null distributions
 
 Outputs: 
     - Average enrichment x Spectral count bubble plot
 
 Usage: 
     python averageEnrichment_spectralCount_visualization.py \
-        -i second_search/SIP2_filtered_psms.tsv \
-        -n sample_dict.csv -m magnify_mouse_genomes-all_metadata.tsv \
-        -t Significantly_Labeled_Taxa.csv
+        -i [percolator output] \
+        -n [sample names lookup table] \
+        -m [MGYG metadata] \
+        -t [significantly labeled taxa]
 
 Notes:
     [insert justification for thresholds]
@@ -92,6 +93,12 @@ class parseSIPData():
         SIPdf : pandas.DataFrame
             DataFrame containing labeled PSMs, including their enrichment values
 
+        treatmentGroupDict : dict
+            Dictionary used to retrieve treatment group based on MS/MS file name
+
+        statDict : dict
+            Dictionary used to retrieve status (labeled/unlabeled) of sample based on treatment group
+
         Returns
         -------
         t_avgEnrichmentDf : pandas.DataFrame
@@ -137,7 +144,7 @@ class parseSIPData():
 
         Parameters
         ----------
-        namesDictIn : file path to MGYG metadata CSV
+        metadata : file path to MGYG metadata CSV
             CSV file contains many fields, here we only read in the taxon ID and full lineage with taxon names
 
         Returns 
@@ -191,6 +198,22 @@ class parseSIPData():
         return gb
 
 class plotGenera():
+    """
+    Plot parsed SIP data summarized at the taxon level as a bubble plot
+
+    Attributes:
+        averageEnrichmentData (pandas.DataFrame):
+            DataFrame with average enrichment values where index is genus name and columns represent samples
+
+        spectralCountData (pandas.DataFrame):
+            DataFrame with sum spectral count values where index is genus name and columns represent samples
+
+        sigLabeledTaxa (pandas.DataFrame):
+            DataFrame with one column containing names of genera deemed significant based on null distributions
+
+        colormap (LinearSegmentedColormap object):
+            Custom colormap for visualization
+    """
 
     def __init__(self, averageEnrichmentData, spectralCountData, sigLabeledTaxa, colormap):
         self.spectralCountData = spectralCountData
@@ -199,9 +222,38 @@ class plotGenera():
         self.colormap = colormap
 
     def chooseGenera(self):
+        """
+        Of all significantly labeled taxa, determine which ones should be included in visualization based on thresholds
+        
+        Parameters
+        ----------
+        self.averageEnrichmentData : pandas.DataFrame
+            DataFrame with average enrichment values where index is genus name and columns represent samples
+
+        self.spectralCountData : pandas.DataFrame
+            DataFrame with sum spectral count values where index is genus name and columns represent samples
+
+        Returns
+        -------
+        taxa2use : list
+            List of significantly labeled genera whose average enrichment or spectral count values surpass thresholds
+
+        aeValuesList : list
+            List of all average enrichment values that will be included in plot.
+            Used for determining max and min average enrichment values. 
+
+        scValuesList : list
+            List of all spectral count values that will be included in plot. 
+            Used for determining max spectral count value to display in legend. 
+
+        Notes
+        -----
+        [insert threshold justification]
+        """
         taxa2use = []
         aeValuesList = []
         scValuesList = []
+        ### Set thresholds
         minSpectralCountThresh = 10
         avgEnThresh = 25
         maxAvgEn = 95
@@ -210,30 +262,38 @@ class plotGenera():
             if taxon_e == taxon_s and taxon_e in self.sigLabeledTaxa['Taxon'].values:
                 if (not all(specc < minSpectralCountThresh for specc in samples_s) and any(specc > spectCountThresh for specc in samples_s)) or (not all(specc < minSpectralCountThresh for specc in samples_s) and any(maxAvgEn > avgen > avgEnThresh for avgen in samples_e)):
                     taxa2use.append(taxon_e)
-                for num in samples_e:
-                    aeValuesList.append(num)
-                for num in samples_s:
-                    scValuesList.append(num)
+                    for num in samples_e:
+                        aeValuesList.append(num)
+                    for num in samples_s:
+                        scValuesList.append(num)
         return taxa2use, aeValuesList, scValuesList
 
     def plotBubblePlot(self, enrichmentVals, spectCountVals, taxa):
+        """
+        Plot visualization
+
+        Parameters
+        ----------
+        enrichmentVals : list
+            List of all average enrichment values that will be included in plot.
+        
+        spectCountVals : list
+            List of all spectral count values that will be included in plot. 
+
+        """
         fig, ax = plt.subplots(figsize = (11.5, 8))
         plt.subplots_adjust(left=0.26)
 
         vmin = min(enrichmentVals)
         vmax = max(enrichmentVals)
         norm = Normalize(vmin=vmin, vmax=vmax) 
+        
         plotTaxa = pd.Series(taxa).drop_duplicates().values.tolist()
         self.spectralCountData.columns = self.spectralCountData.columns.droplevel(0)
         self.averageEnrichmentData.columns = self.averageEnrichmentData.columns.droplevel(0)
-
-        # plotSCDf = pd.concat([self.spectralCountData['C6'], self.spectralCountData['C12'], self.spectralCountData['C18'], self.spectralCountData['C24']], axis = 1)
-        # plotENDf = pd.concat([ self.averageEnrichmentData.columns['C6'],  self.averageEnrichmentData.columns['C12'],  self.averageEnrichmentData.columns['C18'],  self.averageEnrichmentData.columns['C24']], axis = 1)
-
+        ### Organize columns based on time point so x axis is chronological
         self.spectralCountData = self.spectralCountData.reindex(['C6', 'C12', 'C18', 'C24'], axis=1)
         self.averageEnrichmentData = self.averageEnrichmentData.reindex(['C6', 'C12', 'C18', 'C24'], axis=1)
-        print(self.averageEnrichmentData.loc['g__Evtepia'])
-        print(self.spectralCountData.loc['g__Evtepia'])
 
         ylocs = []
         ylabs = []
@@ -241,33 +301,26 @@ class plotGenera():
         cmax = max(spectCountVals)
         minS, maxS = 30, 900 
         for i1, (taxon) in enumerate(plotTaxa):
-            enrichmentData = self.averageEnrichmentData.loc[taxon] # get series with average enrichment for each taxon (out of 20) for all samples
-            countData = self.spectralCountData.loc[taxon] # get series with sum spectral counts for each taxon (out of 20) for all samples
-            ylocs.append(i1) # append indices ➤ # taxa = # of yticks 
-            ylabs.append(taxon) # append taxon names ➤ will be yticklabels
-            ### iterate over each series with enrichment or spectral count data by sample
-            ### i2 = counts number of samples ➤ use this for x values
-            ### i1 = height of scatter point because it corresponds to the index of taxon to plot 
-            ### eData = average enrichment, make this the color of each point
-            ### cData = the spectral count, make this the size of each point, after scaling by 50
-            ### s argument in scatter() is size of point in pixels. 50 is the baseline size (when spectral count is 0), and every point is scaled based on this
+            # get series with average enrichment for each taxon
+            enrichmentData = self.averageEnrichmentData.loc[taxon] 
+            # get series with sum spectral counts for each taxon
+            countData = self.spectralCountData.loc[taxon] 
+            ylocs.append(i1) 
+            ylabs.append(taxon)
+            ### iterate over each series with enrichment or spectral count data of all samples
             for i2, (eData, cData) in enumerate(zip(enrichmentData.values, countData.values)): 
+                ### scale size factor
                 sval = minS + (maxS - minS) * (cData - cmin) / (cmax - cmin) if cmax > cmin else minS
                 if cData == 0:
-                    scat = plt.scatter(i2, i1, s = sval,  c = 'white', norm = norm)
+                    plt.scatter(i2, i1, s = sval,  c = 'white', norm = norm)
                 else:
-                    scat = plt.scatter(i2, i1, s = sval, c = [eData], cmap = self.colormap, norm = norm)
+                    plt.scatter(i2, i1, s = sval, c = [eData], cmap = self.colormap, norm = norm)
 
-        # d = pd.DataFrame(l, columns=['Taxon', 'MaxEnrichment', 'MaxSC'])
-        # print(d.sort_values(by = 'MaxSC', ascending = False))
-        ### Get all file names (same in sc_mostAbundant AND en_mostAbundant) 
-        ### and convert to sample names, then format for visualization
         xLocs = []
         xLabs = []
         for idx, sname in enumerate(list(self.spectralCountData.columns)):
             xLocs.append(idx)
             xLabs.append(sname)
-
         plt.yticks(ylocs, ylabs, fontsize = 16)
         plt.xticks(xLocs, xLabs, fontsize = 16)
 
@@ -278,10 +331,8 @@ class plotGenera():
             sval = minS + (maxS - minS) * (c - cmin) / (cmax - cmin) if cmax > cmin else minS
             handles.append(ax.scatter([], [], s=sval, color="gray", alpha=0.6))
         labels = [f"{int(c)}" for c in exampleCounts]
-
         sm = ScalarMappable(norm=norm, cmap=self.colormap)
         sm.set_array([])
-
         ax.legend(handles, labels, title="Spectral Count", scatterpoints=1, frameon=False, labelspacing=2.5, bbox_to_anchor=(1.4,1.02))
         fig.colorbar(sm, ax=ax, label='Average Enrichment')
         plt.show()
