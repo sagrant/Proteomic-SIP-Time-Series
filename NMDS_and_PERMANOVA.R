@@ -57,9 +57,6 @@ labeledBrayDist.taxon.clr.cecum <- vegdist(t(labeledPhyloseqObj.taxon.clr.cecum@
 labeledBrayDistMatrix.taxon.clr.cecum <- as.matrix(labeledBrayDist.taxon.clr.cecum)
 labeledPERMANOVAMetadata.taxon.clr.O.cecum <- labeledPERMANOVAMetadata.taxon.clr.cecum[labels(labeledBrayDist.taxon.clr.cecum), , drop = FALSE]
 
-identical(row.names(labeledBrayDistMatrix.taxon.clr.cecum), row.names(labeledPERMANOVAMetadata.taxon.clr.cecum)) #check that rownames match between the two objects
-identical(rownames(labeledPERMANOVAMetadata.taxon.clr.O.cecum), labels(labeledBrayDist.taxon.clr.cecum))
-
 adonis2(labeledBrayDist.taxon.clr.cecum ~ Time, data = labeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999) 
 
 ### UNLABELED
@@ -78,8 +75,5 @@ unlabeledPERMANOVAMetadata.taxon.clr.O.cecum  <- unlabeledPERMANOVAMetadata.taxo
 unlabeledBrayDist.taxon.clr.cecum <- vegdist(t(unlabeledPhyloseqObj.taxon.clr.cecum@otu_table), method = "euclidean", diag = TRUE) #create a distance matrix from the asv count table of the phyloseq object
 unlabeledBrayDistMatrix.taxon.clr.cecum <- as.matrix(unlabeledBrayDist.taxon.clr.cecum)
 unlabeledPERMANOVAMetadata.taxon.clr.O.cecum <- unlabeledPERMANOVAMetadata.taxon.clr.cecum[labels(unlabeledBrayDist.taxon.clr.cecum), , drop = FALSE]
-
-identical(row.names(unlabeledBrayDistMatrix.taxon.clr.cecum), row.names(unlabeledPERMANOVAMetadata.taxon.clr.O.cecum)) #check that rownames match between the two objects
-identical(rownames(unlabeledPERMANOVAMetadata.taxon.clr.O.cecum), labels(unlabeledBrayDist.taxon.clr.cecum))
 
 adonis2(unlabeledBrayDist.taxon.clr.cecum ~ Time, data = unlabeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999)
