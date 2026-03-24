@@ -40,8 +40,8 @@ The gut microbiome is closely related to host health and plays a major role in h
 │   ├── null_distributions.py
 │   ├── subset_unlabeled.py
 │   ├── taxonomy_bar_chart.py
-│   ├── averageEnrichment_spectralCount_bubblePlot.py
-│   └── cluster_taxa.R
+│   ├── cluster_taxa.R
+│   └── averageEnrichment_spectralCount_bubblePlot.py
 └── phylogenetic and functional analysis
     ├── trait_data.py
     └── phylogenetic_functions_tree.R
@@ -50,6 +50,24 @@ The gut microbiome is closely related to host health and plays a major role in h
 # Community Analysis
 | Script | Description |
 | --- | --- |
+| `count_detected_PSMsPeptidesProteins.py` | Count the number of labeled PSMs, peptides, and proteins reported by Percolator |
 | `calculate_FPR.py` | Calculate dataset false positive rate |
 | `proportion_labeled_PSMs.py` | Calculate proportion of labeled PSMs out of all PSMs |
-| `enrichment_distributions.py` | Visualize 13C enrichment distributions of all labeled PSMs |
+| `enrichment_distributions.py` | Visualize <sup>13</sup>C enrichment distributions of all labeled PSMs |
+| `generate_phyloseq.py` | Parse data into tables that can be used to make a phyloseq object in R |
+| `NMDS_and_PERMANOVA.R` | Use tables output by `generate_phyloseq.py` to run NMDS ordination and PERMANOVAs |
+
+# Taxonomic Analysis
+| Script | Description |
+| --- | --- |
+| `null_distributions.py` | Determine which organisms were significantly labeled using null distributions |
+| `subset_unlabeled.py` | Subset unlabeled PSMs from total proteome to generate CSV representing unlabeled proteome |
+| `taxonomy_bar_chart.py' | Visualize how proportional spectral counts of abundant genera change over time in labeled and unlabeled proteomes |
+| `cluster_taxa.R` | Cluster genera based on average <sup>13</sup>C enrichment or labeled spectral counts to identify genera that should be included in bubble plot |
+| `averageEnrichment_spectralCount_bubblePlot.py` | Visualize relationship between average enrichment and spectral count as a bubble plot |
+
+# Phylogenetic and Functional Analysis
+| Script | Description |
+| --- | --- |
+| `trait_data.py` | Parse data and generate tables that can be used to plot phylogenetic tree heatmap |
+| `phylogenetic_functions_tree.R' | Plot phylogenetic tree with all detected genera and a heatmap displaying their <sup>13</sup>C assimilation patterns |
