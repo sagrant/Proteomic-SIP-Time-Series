@@ -75,4 +75,4 @@ The gut microbiome is closely related to host health and plays a major role in h
 | Script | Description |
 | --- | --- |
 | `trait_data.py` | Parse data and generate tables that can be used to plot phylogenetic tree heatmap |
-| `phylogenetic_functions_tree.R' | Plot phylogenetic tree with all detected genera and a heatmap displaying their <sup>13</sup>C assimilation patterns |
+| `phylogenetic_functions_tree.R` | Plot phylogenetic tree with all detected genera and a heatmap displaying their <sup>13</sup>C assimilation patterns |
