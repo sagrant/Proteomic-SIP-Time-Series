@@ -24,7 +24,7 @@ Usage:
         -s [spectra table]
 '''
 
-class calculateDataSetFDR():
+class calculateDataSetFPR():
     """
     Calculate FPR
 
@@ -124,14 +124,14 @@ def main():
     SIPdf = pd.read_csv(args.percolatorOutput, sep = '\t', header = 0, usecols = [0, 25, 26])
     spectraDf = pd.read_csv(args.spectra).dropna()
 
-    calcFDR = calculateDataSetFDR(SIPdf, spectraDf)
-    sampleDict, statusDict = calcFDR.sampleMetadata(args.namesDict)
-    totalLabeled_unlabeledSamples = calcFDR.PSMCounts(sampleDict, statusDict)
-    totalSpectra_unlabeledSamples = calcFDR.SpectraCounts(statusDict)
+    calcFPR = calculateDataSetFPR(SIPdf, spectraDf)
+    sampleDict, statusDict = calcFPR.sampleMetadata(args.namesDict)
+    totalLabeled_unlabeledSamples = calcFPR.PSMCounts(sampleDict, statusDict)
+    totalSpectra_unlabeledSamples = calcFPR.SpectraCounts(statusDict)
 
-    FDR = sum(totalLabeled_unlabeledSamples) / totalSpectra_unlabeledSamples
+    FPR = sum(totalLabeled_unlabeledSamples) / totalSpectra_unlabeledSamples
     print('------------------------------------------')
-    print(f'FDR for this dataset = {FDR}')
+    print(f'FPR for this dataset = {FPR}')
     print('------------------------------------------')
     print('------------------------------------------')
 
