@@ -27,6 +27,7 @@ The gut microbiome is closely related to host health and plays a major role in h
 * Hotelling 1.0-8
 
 ## Directory structure
+```
 ├── images
 ├── community_analysis
 │   ├── count_detected_PSMsPeptidesProteins.py  # Count labeled PSMs, peptides, and proteins
@@ -44,3 +45,4 @@ The gut microbiome is closely related to host health and plays a major role in h
 └── phylogenetic and functional analysis
     ├── trait_data.py   # Generate metadata table to be used to make heatmap that accompanies phylogenetic tree
     └── phylogenetic_functions_tree.R   # Generate phylogenetic tree
+```
