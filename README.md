@@ -17,7 +17,7 @@ The gut microbiome is closely related to host health and plays a major role in h
 
 ## Bioinformatic pipeline
 <p align="center">
-    <img src="images/time_series_flowcharts.png" width="700">
+    <img src="images/time_series_flowcharts.svg" width="700">
 
 
 ## Requirements and dependencies
