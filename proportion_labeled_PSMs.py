@@ -4,6 +4,8 @@ proportion_labeled_PSMs.py
 
 Purpose:
     Visualize and record the proportion of labeled PSMs out of all detected PSMs.
+    Generate input data for quasibinomial GLM asking if labeleing significantly increased 
+    over time
 
 Inputs:
     - Path to directory with sample-specific Sipros output files in TSV format
@@ -11,7 +13,7 @@ Inputs:
 
 Outputs:
     - Bar chart depicting changes in proportion of labeled PSMs over time
-    - CSV containing proportion of labeled and unlabeled PSMs, as well as total counts of PSMs
+    - CSV containing proportion of labeled PSMs, and relevant metadata 
 
 Usage:
     python proportion_labeled_PSMs.py \
@@ -65,15 +67,19 @@ class calculateProportions():
         sampleLookupDict = sampleLookup.to_dict(orient = 'index')
         groupDict = {}
         orderDict = {}
+        sTypeDict = {}
+        timePointDict = {}
         for sampleID, sampleName in sampleLookupDict.items():
             group = sampleName['SampleName'].split('.')
             groupDict[sampleName['FileName']] = group[0]
+            sTypeDict[group[0]] = group[0][0]
+            timePointDict[group[0]] = group[0][1::]
             ### Generate some dummy values to associate treatment group names with their chronological order
             if 'C' in sampleName['SampleName']:
                 orderDict[group[0]] = int(group[0][1::]) + 1
             if 'S' in sampleName['SampleName']:
                 orderDict[group[0]] = (int(group[0][1::])+ 25)*2
-        return groupDict, orderDict
+        return groupDict, orderDict, sTypeDict, timePointDict
 
     def parseSamples(self, treatmentGroupDict, ordDict):
         """
@@ -126,7 +132,7 @@ class calculateProportions():
         sampleData : pandas.DataFrame
             Contains proportions of labeled and unlabeled PSMs, as well as total count
         """
-        gbGroup = sampleData.groupby('Group', sort = False).mean().round(decimals=3)
+        gbGroup = sampleData.groupby('Group', sort = False).mean()
 
         fig, axs = plt.subplots()
 
@@ -144,7 +150,13 @@ class calculateProportions():
 
         plt.tight_layout()
         plt.show()
+        return gbGroup
 
+    def generateProportionsOut(self, gbData, sampleTypesDict, timePointsDict):
+        gbData = gbData.reset_index().drop(['Total_PSMs', 'Labeled_PSMs', 'Unlabeled_PSMs', 'Proportion_Unlabeled'], axis = 1)
+        gbData['Sample_Type'] = gbData['Group'].map(sampleTypesDict)
+        gbData['Time_Point'] = gbData['Group'].map(timePointsDict)
+        return gbData
 
 def main():
     parser = argparse.ArgumentParser()
@@ -161,10 +173,12 @@ def main():
         dfsList.append(df)
 
     calc = calculateProportions(dfsList)
-    gDict, oDict = calc.sampleMetadata(args.names)
+    gDict, oDict, stDict, tDict = calc.sampleMetadata(args.names)
     counts = calc.parseSamples(gDict, oDict)
-    calc.plotProportions(counts)
-    counts.to_csv(args.outFile)
+    gb = calc.plotProportions(counts)
+
+    outData = calc.generateProportionsOut(gb, stDict, tDict)
+    outData.to_csv(args.outFile)
 
 if __name__ == "__main__":
     main()
