@@ -30,19 +30,26 @@ The gut microbiome is closely related to host health and plays a major role in h
 ```
 ├── images
 ├── community_analysis
-│   ├── count_detected_PSMsPeptidesProteins.py  # Count labeled PSMs, peptides, and proteins
-│   ├── calculate_FPR.py    # Calculate dataset FPR
-│   ├── proportion_labeled_PSMs.py  # Calculate the proportion of labeled PSMs out of all PSMs 
-│   ├── enrichment_distributions.py # Visualize 13C enrichment distributions of all labeled PSMs 
-│   ├── generate_phyloseq.py    # Parse data into tables that can be used to make a phyloseq object in R
-│   └── NMDS_and_PERMANOVA.R    # Generate NMDS ordination and run PERMANOVA tests
+│   ├── count_detected_PSMsPeptidesProteins.py
+│   ├── calculate_FPR.py
+│   ├── proportion_labeled_PSMs.py
+│   ├── enrichment_distributions.py
+│   ├── generate_phyloseq.py
+│   └── NMDS_and_PERMANOVA.R
 ├── taxonomic_analysis
-│   ├── null_distributions.py   # Determine which organisms were significantly labeled using null distributions 
-│   ├── subset_unlabeled.py # Subset unlabeled proteome from total proteome to be used to generate taxonomy bar chart
-│   ├── taxonomy_bar_chart.py   # Visualize how proportional spectral counts of abundant genera change over time 
-│   ├── averageEnrichment_spectralCount_bubblePlot.py   # Visualize relationship between average enrichment and spectral count
-│   └── cluster_taxa.R  # Cluster genera based on average 13C enrichment or labeled spectral counts
+│   ├── null_distributions.py
+│   ├── subset_unlabeled.py
+│   ├── taxonomy_bar_chart.py
+│   ├── averageEnrichment_spectralCount_bubblePlot.py
+│   └── cluster_taxa.R
 └── phylogenetic and functional analysis
-    ├── trait_data.py   # Generate metadata table to be used to make heatmap that accompanies phylogenetic tree
-    └── phylogenetic_functions_tree.R   # Generate phylogenetic tree
+    ├── trait_data.py
+    └── phylogenetic_functions_tree.R
 ```
+
+# Community Analysis
+| Script | Description |
+| --- | --- |
+| `calculate_FPR.py` | Calculate dataset false positive rate |
+| `proportion_labeled_PSMs.py` | Calculate proportion of labeled PSMs out of all PSMs |
+| `enrichment_distributions.py` | Visualize 13C enrichment distributions of all labeled PSMs |
