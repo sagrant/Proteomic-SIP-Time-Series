@@ -8,7 +8,7 @@ The gut microbiome is closely related to host health and plays a major role in h
 
 ## Bioinformatic pipeline
 <p align="center">
-    <img src="images/time_series_flowchart.svg" width="700">
+    <img src="images/time_series_flowchart.svg" width="900">
 
 ## Objectives
 * Count the number of labeled PSMs, peptides, and proteins detected in Percolator output 
