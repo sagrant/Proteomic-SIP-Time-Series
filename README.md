@@ -15,6 +15,11 @@ The gut microbiome is closely related to host health and plays a major role in h
 * Identify organisms that assimilated the labeled substrate, and those that did not
 * Visualize the relationship between average <sup>13</sup>C enrichment and spectral count for significantly labeled genera
 
+## Bioinformatic pipeline
+<p align="center">
+    <img src="images/time_series_flowcharts.png" width="700">
+
+
 ## Requirements and dependencies
 * Python 3.13.5
 * Pandas 3.0.0
@@ -47,7 +52,7 @@ The gut microbiome is closely related to host health and plays a major role in h
     └── phylogenetic_functions_tree.R
 ```
 
-# Community Analysis
+### Community Analysis
 | Script | Description |
 | --- | --- |
 | `count_detected_PSMsPeptidesProteins.py` | Count the number of labeled PSMs, peptides, and proteins reported by Percolator |
@@ -57,16 +62,16 @@ The gut microbiome is closely related to host health and plays a major role in h
 | `generate_phyloseq.py` | Parse data into tables that can be used to make a phyloseq object in R |
 | `NMDS_and_PERMANOVA.R` | Use tables output by `generate_phyloseq.py` to run NMDS ordination and PERMANOVAs |
 
-# Taxonomic Analysis
+### Taxonomic Analysis
 | Script | Description |
 | --- | --- |
 | `null_distributions.py` | Determine which organisms were significantly labeled using null distributions |
 | `subset_unlabeled.py` | Subset unlabeled PSMs from total proteome to generate CSV representing unlabeled proteome |
-| `taxonomy_bar_chart.py' | Visualize how proportional spectral counts of abundant genera change over time in labeled and unlabeled proteomes |
+| `taxonomy_bar_chart.py` | Visualize how proportional spectral counts of abundant genera change over time in labeled and unlabeled proteomes |
 | `cluster_taxa.R` | Cluster genera based on average <sup>13</sup>C enrichment or labeled spectral counts to identify genera that should be included in bubble plot |
 | `averageEnrichment_spectralCount_bubblePlot.py` | Visualize relationship between average enrichment and spectral count as a bubble plot |
 
-# Phylogenetic and Functional Analysis
+### Phylogenetic and Functional Analysis
 | Script | Description |
 | --- | --- |
 | `trait_data.py` | Parse data and generate tables that can be used to plot phylogenetic tree heatmap |
