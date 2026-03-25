@@ -13,7 +13,7 @@ Inputs:
 
 Outputs:
     - Bar chart depicting changes in proportion of labeled PSMs over time
-    - CSV containing proportion of labeled PSMs, and relevant metadata 
+    - CSV containing proportion of labeled PSMs, and relevant metadata. Will be used as input for significant_labeling_over_time.R
 
 Usage:
     python proportion_labeled_PSMs.py \
@@ -150,13 +150,13 @@ class calculateProportions():
 
         plt.tight_layout()
         plt.show()
-        return gbGroup
 
-    def generateProportionsOut(self, gbData, sampleTypesDict, timePointsDict):
-        gbData = gbData.reset_index().drop(['Total_PSMs', 'Labeled_PSMs', 'Unlabeled_PSMs', 'Proportion_Unlabeled'], axis = 1)
-        gbData['Sample_Type'] = gbData['Group'].map(sampleTypesDict)
-        gbData['Time_Point'] = gbData['Group'].map(timePointsDict)
-        return gbData
+    def generateProportionsOut(self, countData, sampleTypesDict, timePointsDict):
+        countData = countData.drop(['Labeled_PSMs', 'Unlabeled_PSMs', 'Proportion_Unlabeled'], axis = 1)
+        ### Add metadata to output dataframe 
+        countData['Sample_Type'] = countData['Group'].map(sampleTypesDict)
+        countData['Time_Point'] = countData['Group'].map(timePointsDict)
+        return countData
 
 def main():
     parser = argparse.ArgumentParser()
@@ -175,9 +175,9 @@ def main():
     calc = calculateProportions(dfsList)
     gDict, oDict, stDict, tDict = calc.sampleMetadata(args.names)
     counts = calc.parseSamples(gDict, oDict)
-    gb = calc.plotProportions(counts)
+    calc.plotProportions(counts)
 
-    outData = calc.generateProportionsOut(gb, stDict, tDict)
+    outData = calc.generateProportionsOut(counts, stDict, tDict)
     outData.to_csv(args.outFile)
 
 if __name__ == "__main__":
