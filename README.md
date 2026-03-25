@@ -13,11 +13,12 @@ The gut microbiome is closely related to host health and plays a major role in h
 ## Objectives
 * Count the number of labeled PSMs, peptides, and proteins detected in Percolator output 
 * Calculate False Positive Rate (FPR)
-* Visualize how the proportion of labeled PSMs changes over time and determine if changes are significant
+* Visualize how the proportion of labeled PSMs out of total PSMs changes over time and determine if changes are significant
 * Visualize distribution of <sup>13</sup>C enrichment over time
 * Compare empirical counts of labeled PSMs for detected genera with what would be expected under null conditions
-* Identify organisms that assimilated the labeled substrate, and those that did not based on a bar chart visualization
+* Identify organisms that assimilated the labeled substrate, and those that did not based on a bar chart of proportional specrtal counts assigned to the most abundant genera
 * Visualize the relationship between average <sup>13</sup>C enrichment and spectral count for significantly labeled genera
+* Generate a phylogenetic tree and heatmap to determine if evolutionary relationships predict assimilation of <sup>13</sup>C algal protein
 
 ## Requirements and dependencies
 * Python 3.13.5
@@ -56,16 +57,17 @@ The gut microbiome is closely related to host health and plays a major role in h
 | --- | --- |
 | `count_detected_PSMsPeptidesProteins.py` | Count the number of labeled PSMs, peptides, and proteins reported by Percolator |
 | `calculate_FPR.py` | Calculate dataset false positive rate |
-| `proportion_labeled_PSMs.py` | Calculate proportion of labeled PSMs out of all PSMs |
+| `proportion_labeled_PSMs.py` | Visualize proportion of labeled PSMs out of all PSMs. Generates input for `labeling_over_time.R` |
+| `labeling_over_time.R` | Determine if amount of <sup>13</sup>C labeling changes significantly over time |
 | `enrichment_distributions.py` | Visualize <sup>13</sup>C enrichment distributions of all labeled PSMs |
-| `generate_phyloseq.py` | Parse data into tables that can be used to make a phyloseq object in R |
+| `generate_phyloseq.py` | Parse data into tables that can be used to make a phyloseq object in R. Generates input for `NMDS_and_PERMANOVA.R` and `cluster_taxa.R` |
 | `NMDS_and_PERMANOVA.R` | Use tables output by `generate_phyloseq.py` to run NMDS ordination and PERMANOVAs |
 
 ### Taxonomic Analysis
 | Script | Description |
 | --- | --- |
 | `null_distributions.py` | Determine which organisms were significantly labeled using null distributions |
-| `subset_unlabeled.py` | Subset unlabeled PSMs from total proteome to generate CSV representing unlabeled proteome |
+| `subset_unlabeled.py` | Subset unlabeled PSMs from total proteome to generate CSV representing unlabeled proteome. Generates input for `taxonomy_bar_chart.py` |
 | `taxonomy_bar_chart.py` | Visualize how proportional spectral counts of abundant genera change over time in labeled and unlabeled proteomes |
 | `cluster_taxa.R` | Cluster genera based on average <sup>13</sup>C enrichment or labeled spectral counts to identify genera that should be included in bubble plot |
 | `averageEnrichment_spectralCount_bubblePlot.py` | Visualize relationship between average enrichment and spectral count as a bubble plot |
@@ -73,5 +75,5 @@ The gut microbiome is closely related to host health and plays a major role in h
 ### Phylogenetic and Functional Analysis
 | Script | Description |
 | --- | --- |
-| `trait_data.py` | Parse data and generate tables that can be used to plot phylogenetic tree heatmap |
+| `trait_data.py` | Parse data and generate tables that can be used to plot phylogenetic tree heatmap. Generates input for `phylogenetic_functions_tree.R` |
 | `phylogenetic_functions_tree.R` | Plot phylogenetic tree with all detected genera and a heatmap displaying their <sup>13</sup>C assimilation patterns |
