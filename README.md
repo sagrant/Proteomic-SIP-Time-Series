@@ -1,4 +1,4 @@
-# Proteomic SIP Replicated Time Series Experiment 
+# Proteomic SIP Time Series Experiment 
 This repository contains code and metadata required to visualize and analyze data produced by a Proteomic SIP experiment examining <sup>13</sup>C algal protein assimilation in the mouse gut microbiome.
 
 <p align="center">
@@ -28,8 +28,15 @@ The gut microbiome is closely related to host health and plays a major role in h
 * R version 4.5.1
 * phyloseq 1.52.0
 * vegan 2.7-2
+* ggplot2_4.0.1
 * compositions 2.0-9
 * Hotelling 1.0-8
+* ggnewscale_0.5.2
+* dplyr_1.1.4
+* ggtreeExtra_1.18.1
+* ape_5.8-1
+* ggtree_3.16.3
+* caper_1.0.4
 
 ## Directory structure
 ```
