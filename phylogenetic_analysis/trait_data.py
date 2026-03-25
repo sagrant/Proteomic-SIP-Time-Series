@@ -1,6 +1,26 @@
 #!/usr/bin/env python3
 """
+trait_data.py
 
+Purpose:
+    Generate dataframe required to make phylogenetic tree heatmap
+
+Inputs:
+    - Path to directory with Sipros output files
+    - File names --> sample names lookup table (CSV)
+    - MGYG proteome metadata with taxon IDs --> taxon lineage (CSV)
+    - DataFrame containing all MGYG protein IDs associated with enzymes of interest (CSV)
+
+Outputs:
+    - Trait data to be used for make phylogenetic tree heatmap
+
+Usage:
+    python generate_phyloseq.py \
+        -p [file path] \
+        -n [sample dictionary] \
+        -m [MGYG metadata] \
+        -k [KEGG functions metadata]
+        -o [output file]
 """
 import pandas as pd
 import numpy as np
@@ -21,11 +41,8 @@ def sampleMetadata(namesDictIn):
 
     Returns 
     -------
-    groupDict : dict
-        Dictionary to convert MS/MS file name to treatment group ID
-    
-    sampStatDict : dict 
-        Dictionary to lookup if sample is unlabeled or labeled 
+    sDict : dict
+        Dictionary to convert MS/MS file name to sample name
 
     Notes
     -----
@@ -34,15 +51,9 @@ def sampleMetadata(namesDictIn):
     sampleLookup = pd.read_csv(namesDictIn)
     sampleLookupDict = sampleLookup.to_dict(orient = 'index')
     sDict = {}
-    sampStatDict = {}
     for sampleID, sampleName in sampleLookupDict.items():
-        group = sampleName['SampleName'].split('.')
         sDict[sampleName['FileName']] = sampleName['SampleName']
-        if '0' in sampleName['SampleName'].split('.')[0]:
-            sampStatDict[group[0]] = 'Unlabeled'
-        else:
-            sampStatDict[group[0]] = 'Labeled'
-    return sDict, sampStatDict
+    return sDict
 
 
 def parseMGYGData(metadata):
@@ -70,16 +81,65 @@ def parseMGYGData(metadata):
 
 
 class generateTraitData():
+    """
+    Generate trait data 
+
+    Resulting dataframe contains labeled spectral counts, total spectral counts,
+    average enrichment, and spectral counts of enzymes of interest for all detected genera
+
+    Attributes:
+        siprosData (pandas.DataFrame) : Concatenated sipros output for all samples
+    """
 
     def __init__(self, siprosData):
         self.siprosData = siprosData
 
     def computeSpectralCounts(dataList, colName):
+        """
+        Calculate total spectral counts or labeled spectral counts of all detected genera
+
+        Parameters
+        ----------
+        dataList : list
+            List of genera names, each item in list represents 1 spectral count
+
+        colName : str
+            Name of spectral count column in resulting dataframe 
+
+        Returns
+        -------
+        spectralCountDf : pandas.DataFrame
+            Dataframe with either total spectral counts or labeled spectral counts of all 
+            detected genera
+        """
         abundanceData = pd.DataFrame(dataList).rename(columns = {0:'Genus'})
         spectralCountDf = abundanceData.groupby('Genus').size().reset_index().rename(columns = {0:colName})
         return spectralCountDf
 
     def parseSiprosData(self, taxonomyDict, k0Dict, keggFunctDict):
+        """
+        Parse total proteome and save functional information, spectral counts, and average
+        enrichment values
+
+        Parameters
+        ----------
+        taxonomyDict : dictionary
+            Dictionary used to retrieve genus names, where keys are MGYG taxon ID and 
+            values are genus names
+
+        k0Dict : dictionary 
+            Dictionary used to retreive Kegg IDs for enzymes of interest. Keys are MGYG ID
+            and values are K0 number
+
+        keggFunctDict : dictionary 
+            Hard-coded dictionary where keys are K0 number and values are the functional name
+            of the enzyme 
+
+        Returns
+        -------
+        mergedTraitData : pandas.DataFrame
+            Dataframe containing all data that will be used to make phylogenetic tree heatmap
+        """
         spectralCountData = []
         labeledSpectralCountData = []
         k0taxonData = []
@@ -93,10 +153,13 @@ class generateTraitData():
                 taxon = taxonomyDict.get(taxonID)
                 spectralCountData.append(taxon)
                 k0function = k0Dict.get(splitProtein)
+                ### If enzyme is associated with any gene in current taxon's genome, save it 
                 if k0function:
-                    funct = keggFunctDict.get(k0function['kegg'], 'Absent')
+                    funct = keggFunctDict.get(k0function['kegg'])
                     k0taxonData.append([taxon, funct])
+                    ### Save function and sample names to visualize expression of these enzymes over time
                     sampleData.append([funct.replace(' ', '\n'), sample])
+                ### If enzyme is NOT associated with genes encoded by current taxon, save placeholder string
                 if not k0function:
                     k0taxonData.append([taxon, 'Absent'])
                 if ms2 >= 2:
@@ -104,6 +167,7 @@ class generateTraitData():
                     labeledSpectralCountData.append(taxon)
         
         k0taxonDf = pd.DataFrame(k0taxonData, columns=['Genus', 'KEGG_Function']).fillna(0)
+        ### Use size because we assume each row = 1 spectral count
         gbk0Taxon = k0taxonDf.groupby(['Genus', 'KEGG_Function']).size().reset_index().rename(columns = {0: 'Spectral_Count'})
         pivotk0Tax = pd.pivot_table(gbk0Taxon, index = 'KEGG_Function', columns= 'Genus', values = 'Spectral_Count', aggfunc=sum).T.fillna(0).reset_index()
         
@@ -129,7 +193,7 @@ def main():
     parser.add_argument('-o', '--outFile')
     args = parser.parse_args()
 
-    sampDict, statDict = sampleMetadata(args.namesDict)
+    sampDict = sampleMetadata(args.namesDict)
     lingDict = parseMGYGData(args.metadata)
 
     k0sDf = pd.read_csv(args.keggDict, sep = ',').set_index('gene_id')
@@ -142,7 +206,6 @@ def main():
     for fHandle in pathList:
         sid = fHandle.split('_filtered_psms.tsv')[0]
         sample = sampDict.get(sid)
-        sampleStat = statDict.get(sid)
         ### Only include cecum samples
         if 'C' in sample:
             df = pd.read_csv(f'{path}/{fHandle}', sep = '\t', usecols = [0, 18, 26])
