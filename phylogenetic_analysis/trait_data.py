@@ -20,7 +20,7 @@ Usage:
         -n [sample dictionary] \
         -m [MGYG metadata] \
         -k [KEGG functions metadata] \
-        -o [output file]
+        -o [output trait data] 
 """
 import pandas as pd
 import numpy as np
@@ -46,6 +46,9 @@ def sampleMetadata(namesDictIn):
     
     oDict : dict
         Dictionary to convert sample name to integer indicating chronological order
+    
+    sampStatDict : dict
+        Dictionary to convert sample name to label status (labeled/unlabeled)
 
     Notes
     -----
@@ -55,10 +58,15 @@ def sampleMetadata(namesDictIn):
     sampleLookupDict = sampleLookup.to_dict(orient = 'index')
     sDict = {}
     oDict = {}
+    sampStatDict = {}
     for sampleID, sampleName in sampleLookupDict.items():
         sDict[sampleName['FileName']] = sampleName['SampleName']
         oDict[sampleName['SampleName']] = int(sampleName['SampleName'].split('.')[1])
-    return sDict, oDict
+        if '0' in sampleName['SampleName'].split('.')[0]:
+            sampStatDict[sampleName['SampleName']] = 'Unlabeled'
+        else:
+            sampStatDict[sampleName['SampleName']] = 'Labeled'
+    return sDict, oDict, sampStatDict
 
 
 def parseMGYGData(metadata):
@@ -96,8 +104,9 @@ class generateTraitData():
         siprosData (pandas.DataFrame) : Concatenated sipros output for all samples
     """
 
-    def __init__(self, siprosData):
+    def __init__(self, siprosData, percData):
         self.siprosData = siprosData
+        self.percData = percData
 
     def computeSpectralCounts(dataList, colName):
         """
@@ -120,8 +129,28 @@ class generateTraitData():
         abundanceData = pd.DataFrame(dataList).rename(columns = {0:'Genus'})
         spectralCountDf = abundanceData.groupby('Genus').size().reset_index().rename(columns = {0:colName})
         return spectralCountDf
+    
+    def parsePercolatorOut(self, namesDict, taxDict, sstatDict):
+        abundData = []
+        enrichmentValues = []
+        for psm, enrichment, protein, sample in self.percData.itertuples(index = False):
+            stripProtein = protein.lstrip('{').rstrip('}')
+            sampleName = namesDict.get(sample)
+            stat = sstatDict.get(sampleName)
+            if stripProtein.startswith('MGYG') and stat != 'Unlabeled':
+                if enrichment >= 2:
+                    splitProtein = stripProtein.split(',')[0].split('_')[0]
+                    taxonName = taxDict.get(splitProtein)
+                    abundData.append(taxonName)
+                    enrichmentValues.append([taxonName, enrichment])
+        
+        labeledSpectralCountDf = generateTraitData.computeSpectralCounts(abundData, 'Labeled_Spectral_Count')
+        enrichDataDf = pd.DataFrame(enrichmentValues).rename(columns = {0: 'Genus', 1: 'Enrichment'})
+        avgEnrichmentDf = enrichDataDf.groupby('Genus').mean()
+        mergeLabeled = labeledSpectralCountDf.merge(avgEnrichmentDf.reset_index(), on = 'Genus',  how = 'outer')
+        return mergeLabeled
 
-    def parseSiprosData(self, taxonomyDict, k0Dict, keggFunctDict):
+    def parseSiprosData(self, taxonomyDict, k0Dict, keggFunctDict, labeledDf):
         """
         Parse total proteome and save functional information, spectral counts, and average
         enrichment values
@@ -148,7 +177,7 @@ class generateTraitData():
         spectralCountData = []
         labeledSpectralCountData = []
         k0taxonData = []
-        enrichmentData = []
+        genusIDs = {}
         sampleData = []
         for psm, ms2, protein, sample in self.siprosData.itertuples(index = False):
             stripProtein = protein.lstrip('{').rstrip('}')
@@ -158,6 +187,7 @@ class generateTraitData():
                 taxon = taxonomyDict.get(taxonID)
                 spectralCountData.append(taxon)
                 k0function = k0Dict.get(splitProtein)
+                genusIDs[taxon] = taxonID
                 ### If enzyme is associated with any gene in current taxon's genome, save it 
                 if k0function:
                     funct = keggFunctDict.get(k0function['kegg'])
@@ -167,25 +197,18 @@ class generateTraitData():
                 ### If enzyme is NOT associated with genes encoded by current taxon, save placeholder string
                 if not k0function:
                     k0taxonData.append([taxon, 'Absent'])
-                if ms2 >= 2:
-                    enrichmentData.append([taxon, ms2])
-                    labeledSpectralCountData.append(taxon)
-        
+
         k0taxonDf = pd.DataFrame(k0taxonData, columns=['Genus', 'KEGG_Function']).fillna(0)
         ### Use size because we assume each row = 1 spectral count
         gbk0Taxon = k0taxonDf.groupby(['Genus', 'KEGG_Function']).size().reset_index().rename(columns = {0: 'Spectral_Count'})
         pivotk0Tax = pd.pivot_table(gbk0Taxon, index = 'KEGG_Function', columns= 'Genus', values = 'Spectral_Count', aggfunc=sum).T.fillna(0).reset_index()
         
-        enrichDataDf = pd.DataFrame(enrichmentData).rename(columns = {0: 'Genus', 1: 'Enrichment'})
-        avgEnrichmentDf = enrichDataDf.groupby('Genus').mean()
-        
         totalSpectralCountDf = generateTraitData.computeSpectralCounts(spectralCountData, 'Total_Spectral_Count')    
-        spectralCountDf = generateTraitData.computeSpectralCounts(labeledSpectralCountData, 'Labeled_Spectral_Count')    
 
-        mergeLabeled = spectralCountDf.merge(avgEnrichmentDf.reset_index(), on = 'Genus',  how = 'outer')
-        mergeTotals = mergeLabeled.merge(totalSpectralCountDf, on = 'Genus', how = 'outer').fillna(0)
+        mergeTotals = labeledDf.merge(totalSpectralCountDf, on = 'Genus', how = 'outer').fillna(0)
 
         mergedTraitData = pivotk0Tax.merge(mergeTotals, on = 'Genus', how = 'outer').fillna(0)
+        mergedTraitData['ID'] = mergedTraitData['Genus'].map(genusIDs)
 
         timePointFunctionsDf = pd.DataFrame(sampleData, columns=['Function', 'Sample'])
         return mergedTraitData, timePointFunctionsDf
@@ -216,18 +239,22 @@ class generateTraitData():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path')
+    parser.add_argument('-i', '--inFile')
     parser.add_argument('-n', '--namesDict')
     parser.add_argument('-m', '--metadata')
     parser.add_argument('-k', '--keggDict')
-    parser.add_argument('-o', '--outFile')
+    parser.add_argument('-o', '--traitDataOut')
+    parser.add_argument('-g', '--generaOut')
     args = parser.parse_args()
 
-    sampDict, ordDict = sampleMetadata(args.namesDict)
+    sampDict, ordDict, sstDict = sampleMetadata(args.namesDict)
     lingDict = parseMGYGData(args.metadata)
 
     k0sDf = pd.read_csv(args.keggDict, sep = ',').set_index('gene_id')
     k0sLookupDict = k0sDf.to_dict(orient = 'index')
     k0sFunctionDict = {'K00929': 'butyrate kinase', 'K00248':'butyryl-CoA dehydrogenase', 'K00074':'3-hydroxybutyryl-CoA dehydrogenase'}
+
+    pDf = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = [0, 17, 25, 26])
 
     path = args.path
     pathList = os.listdir(path)
@@ -243,9 +270,10 @@ def main():
 
     concatDf = pd.concat(dfs)
 
-    traitDataGenerate = generateTraitData(concatDf)
-    outData, sampleFunctionData = traitDataGenerate.parseSiprosData(lingDict, k0sLookupDict, k0sFunctionDict)
-    outData.to_csv(args.outFile)
+    traitDataGenerate = generateTraitData(concatDf, pDf)
+    merged13Cdata = traitDataGenerate.parsePercolatorOut(sampDict, lingDict, sstDict)
+    outData, sampleFunctionData = traitDataGenerate.parseSiprosData(lingDict, k0sLookupDict, k0sFunctionDict, merged13Cdata)
+    outData.to_csv(args.traitDataOut)
 
     traitDataGenerate.plotFunctionsOverTime(sampleFunctionData, ordDict)
 
