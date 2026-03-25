@@ -19,7 +19,7 @@ Usage:
         -p [file path] \
         -n [sample dictionary] \
         -m [MGYG metadata] \
-        -k [KEGG functions metadata]
+        -k [KEGG functions metadata] \
         -o [output file]
 """
 import pandas as pd
