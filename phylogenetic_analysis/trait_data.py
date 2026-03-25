@@ -43,6 +43,9 @@ def sampleMetadata(namesDictIn):
     -------
     sDict : dict
         Dictionary to convert MS/MS file name to sample name
+    
+    oDict : dict
+        Dictionary to convert sample name to integer indicating chronological order
 
     Notes
     -----
@@ -51,9 +54,11 @@ def sampleMetadata(namesDictIn):
     sampleLookup = pd.read_csv(namesDictIn)
     sampleLookupDict = sampleLookup.to_dict(orient = 'index')
     sDict = {}
+    oDict = {}
     for sampleID, sampleName in sampleLookupDict.items():
         sDict[sampleName['FileName']] = sampleName['SampleName']
-    return sDict
+        oDict[sampleName['SampleName']] = int(sampleName['SampleName'].split('.')[1])
+    return sDict, oDict
 
 
 def parseMGYGData(metadata):
@@ -181,8 +186,32 @@ class generateTraitData():
         mergeTotals = mergeLabeled.merge(totalSpectralCountDf, on = 'Genus', how = 'outer').fillna(0)
 
         mergedTraitData = pivotk0Tax.merge(mergeTotals, on = 'Genus', how = 'outer').fillna(0)
-        return mergedTraitData
+
+        timePointFunctionsDf = pd.DataFrame(sampleData, columns=['Function', 'Sample'])
+        return mergedTraitData, timePointFunctionsDf
     
+    def plotFunctionsOverTime(self, timeDf, orderDict):
+        """
+        Plot heatmap to visualize how spectral counts of enzymes of interest change over time
+
+        Parameters
+        ----------
+        timeDf : pandas.DataFrame
+            Dataframe containing enzyme names and spectral counts of enzymes in each sample
+
+        orderDict : dict
+            Dictionary used to sort samples in chronological order
+        """
+        timeDf['Order'] = timeDf['Sample'].map(orderDict)
+        timeDf = timeDf.sort_values(by = 'Order').drop('Order', axis=1)
+        pivotSamplesDf = pd.pivot_table(timeDf, index = 'Function', columns='Sample', aggfunc = 'size', sort=False).fillna(0)
+        
+        fig, axis = plt.subplots()
+        fig.subplots_adjust(left = 0.3, top = 0.89, bottom = 0.2, right = 0.9)
+
+        hmp = sns.heatmap(pivotSamplesDf, ax = axis, xticklabels=True, cbar_kws={'label': 'Total Spectral Count', 'pad' : 0.1}, linecolor = 'white', linewidth = 0.2, cmap = 'YlOrRd')
+        hmp.set(ylabel=None)
+        plt.show()
             
 def main():
     parser = argparse.ArgumentParser()
@@ -193,7 +222,7 @@ def main():
     parser.add_argument('-o', '--outFile')
     args = parser.parse_args()
 
-    sampDict = sampleMetadata(args.namesDict)
+    sampDict, ordDict = sampleMetadata(args.namesDict)
     lingDict = parseMGYGData(args.metadata)
 
     k0sDf = pd.read_csv(args.keggDict, sep = ',').set_index('gene_id')
@@ -215,8 +244,10 @@ def main():
     concatDf = pd.concat(dfs)
 
     traitDataGenerate = generateTraitData(concatDf)
-    outData = traitDataGenerate.parseSiprosData(lingDict, k0sLookupDict, k0sFunctionDict)
+    outData, sampleFunctionData = traitDataGenerate.parseSiprosData(lingDict, k0sLookupDict, k0sFunctionDict)
     outData.to_csv(args.outFile)
+
+    traitDataGenerate.plotFunctionsOverTime(sampleFunctionData, ordDict)
 
 if __name__ == "__main__":
     main()
