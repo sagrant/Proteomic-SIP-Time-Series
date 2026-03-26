@@ -101,4 +101,4 @@ wget http://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/mouse-gut/v1
 File 2 and 3 are provided in the `metadata` directory in this repository.
 
 ### Data required to execute code in this repository
-Raw data from this expeirment can be downloaded from the PRIDE database.
+Raw data from this experiment can be downloaded from the PRIDE database.
