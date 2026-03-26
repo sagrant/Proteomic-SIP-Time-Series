@@ -14,7 +14,8 @@ Inputs:
         - Unlabeled: use TSV file output by subset_unlabeled.py
 
 Outputs:
-    - 2 OTU tables; for both labeled and unlabeld subsets of data
+    - 2 OTU tables composed of spectral counts for either labeled and unlabeld subsets of data
+    - 1 OTU table composed of average enrichment values from total proteome
     - 2 Taxonomy tables; for both labeled and unlabeld subsets of data
     - 2 Metadata tables; for both labeled and unlabeld subsets of data
 
@@ -28,6 +29,7 @@ Usage:
         -mu [Unlabeled metadata output] \
         -tl [Labeled Taxonomy table output] \
         -tu [Unlbeled Taxonomy table output] \
+        -a [Average enrichment OTU table output]
         -ol [Labeled OTU table output] \
         -ou [Unlabeled OTU table output] \
 
@@ -155,7 +157,7 @@ class generatePhyloseqObjData():
         taxonomyTable : pandas.DataFrame
             Taxonomy table for phyloseq object
         """
-        df = pd.read_csv(fileName, sep = '\t', usecols = ['PSMId', 'Proteins', 'FileName'])
+        df = pd.read_csv(fileName, sep = '\t', usecols = ['PSMId', 'MS2IsotopicAbundances', 'Proteins', 'FileName'])
 
         ### Need to remove unlabeled samples from data when making labeled OTU and taxonomy tables
         if status == 'L':
@@ -165,7 +167,8 @@ class generatePhyloseqObjData():
 
         abundData = []
         taxData = []
-        for psm, protein, sample in df.itertuples(index = False):
+        aeData = []
+        for psm, ms2, protein, sample in df.itertuples(index = False):
             stripProtein = protein.lstrip('{').rstrip('}')
             sampName = self.sampleNamingDict.get(sample)
             if stripProtein.startswith('MGYG'):
@@ -174,6 +177,7 @@ class generatePhyloseqObjData():
                 taxonLineage = self.isolateLineageDict.get(splitProtein[0])
                 abundData.append([taxonName, sampName])
                 taxData.append([taxonName, *taxonLineage])
+                aeData.append([taxonName, ms2, sampName])
 
         otuTablsDf = pd.DataFrame(abundData, columns = ['Taxon', 'Sample'])
         ### Assume each row = 1 spectral count
@@ -181,8 +185,13 @@ class generatePhyloseqObjData():
         OTUTable = pd.pivot_table(gbOTUCountDf, index = 'Taxon', columns = 'Sample', aggfunc = 'sum', sort = False).fillna(0)     
         OTUTable.columns = OTUTable.columns.droplevel()
 
+        aeOTUDf = pd.DataFrame(aeData, columns = ['Taxon', 'Enrichment', 'Sample'])
+        gbaeOTUDf = aeOTUDf.groupby(['Taxon', 'Sample']).mean().reset_index()
+        aeOTUTable = pd.pivot_table(gbaeOTUDf, index = 'Taxon', columns = 'Sample', aggfunc = 'mean', sort = False).fillna(0) 
+        aeOTUTable.columns = aeOTUTable.columns.droplevel()
+
         taxonomyTable = pd.DataFrame(taxData, columns = ['otu', 'Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species']).sort_values(by = 'otu').drop_duplicates('otu')
-        return OTUTable, taxonomyTable
+        return OTUTable, taxonomyTable, aeOTUTable
 
     def genPhyMetadata(self, labelStatus):
         """
@@ -226,6 +235,7 @@ def main():
     parser.add_argument('-mu', '--unlabeledMetadata')
     parser.add_argument('-tl', '--labeledTaxonomyTab')
     parser.add_argument('-tu', '--unlabeledTaxonomyTab')
+    parser.add_argument('-a', '--totalAvgEnrichmentOTUTab')
     parser.add_argument('-ol', '--labeledOTUTab')
     parser.add_argument('-ou', '--unlabeledOTUTab')
     args = parser.parse_args()
@@ -235,14 +245,15 @@ def main():
     linDict, flinDict = metadataParser.parseMGYGData()
 
     genPhyObject = generatePhyloseqObjData(sDict, sstatDict, linDict, flinDict)
-    unlab_OTUTAB, unlab_TAXTAB = genPhyObject.parseWithTaxonomy(args.labeledDataFrame, 'L')
-    lab_OTUTAB, lab_TAXTAB = genPhyObject.parseWithTaxonomy(args.unlabeledDataFrame, 'U')
+    unlab_OTUTAB, unlab_TAXTAB, blank = genPhyObject.parseWithTaxonomy(args.unlabeledDataFrame, 'L')
+    lab_OTUTAB, lab_TAXTAB, totAE_OTUTAB = genPhyObject.parseWithTaxonomy(args.labeledDataFrame, 'U')
     lab_METATAB = genPhyObject.genPhyMetadata('L')
     unlabMETATAB = genPhyObject.genPhyMetadata('U')
 
     unlab_OTUTAB.to_csv(args.unlabeledOTUTab)
     unlab_TAXTAB.to_csv(args.unlabeledTaxonomyTab, index = False)
     lab_OTUTAB.to_csv(args.labeledOTUTab)
+    totAE_OTUTAB.to_csv(args.totalAvgEnrichmentOTUTab)
     lab_TAXTAB.to_csv(args.labeledTaxonomyTab, index = False)
     lab_METATAB.to_csv(args.labeledMetadata)
     unlabMETATAB.to_csv(args.unlabeledMetadata)
