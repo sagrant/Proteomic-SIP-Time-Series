@@ -85,3 +85,18 @@ The gut microbiome is closely related to host health and plays a major role in h
 | --- | --- |
 | `trait_data.py` | Parse data and generate tables that can be used to plot phylogenetic tree heatmap. Generates input for `phylogenetic_functions_tree.R` |
 | `phylogenetic_functions_tree.R` | Plot phylogenetic tree with all detected genera and a heatmap displaying their <sup>13</sup>C assimilation patterns |
+
+## Data Availability
+### Metadata required to execute code in this repository
+Several metadata files are required to run the code in these directories:
+* File 1: Taxonomy metadata from MGnify database 
+* File 2: Table to convert MS/MS file names to informative sample names
+* File 3: Table to convert MGnify taxon IDs to KO accessions of relevant enzymes
+
+File 1 can be downloaded from the MGnify FTP site using this command:
+`wget http://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/mouse-gut/v1.0/genomes-all_metadata.tsv`
+
+File 2 and 3 are provided in the `metadata` directory in this repository.
+
+### Data required to execute code in this repository
+Raw data from this expeirment can be downloaded from the PRIDE database.
