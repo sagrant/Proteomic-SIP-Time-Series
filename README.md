@@ -94,7 +94,9 @@ Several metadata files are required to run the code in these directories:
 * File 3: Table to convert MGnify taxon IDs to KO accessions of relevant enzymes
 
 File 1 can be downloaded from the MGnify FTP site using this command:
-`wget http://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/mouse-gut/v1.0/genomes-all_metadata.tsv`
+```
+wget http://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/mouse-gut/v1.0/genomes-all_metadata.tsv
+```
 
 File 2 and 3 are provided in the `metadata` directory in this repository.
 
