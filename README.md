@@ -15,6 +15,7 @@ The gut microbiome is closely related to host health and plays a major role in h
 * Calculate False Positive Rate (FPR)
 * Visualize how the proportion of labeled PSMs out of total PSMs changes over time and determine if changes are significant
 * Visualize distribution of <sup>13</sup>C enrichment over time
+* Conduct NMDS ordination and PERMANOVA to determine if unlabeled and labeled proteome composition changes differently over the course of the experiment
 * Compare empirical counts of labeled PSMs for detected genera with what would be expected under null conditions
 * Identify organisms that assimilated the labeled substrate, and those that did not based on a bar chart of proportional specrtal counts assigned to the most abundant genera
 * Visualize the relationship between average <sup>13</sup>C enrichment and spectral count for significantly labeled genera
