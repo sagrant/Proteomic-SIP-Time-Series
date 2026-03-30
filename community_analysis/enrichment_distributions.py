@@ -23,8 +23,6 @@ import os
 import argparse
 import pandas as pd
 import numpy as np
-import random
-import itertools
 import matplotlib.pyplot as plt
 
 def sampleMetadata(namesDict):
@@ -115,7 +113,6 @@ class communityEnrichment():
             corresponding sample, corresponding treatment group, and 
             mouse ID
         """
-        random.seed(42)
         plotEnrichmentData = []
         for enrichmentData in self.dfsList:
             graphName = []
