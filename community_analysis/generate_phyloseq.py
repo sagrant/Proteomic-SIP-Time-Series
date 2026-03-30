@@ -245,8 +245,8 @@ def main():
     linDict, flinDict = metadataParser.parseMGYGData()
 
     genPhyObject = generatePhyloseqObjData(sDict, sstatDict, linDict, flinDict)
-    unlab_OTUTAB, unlab_TAXTAB, blank = genPhyObject.parseWithTaxonomy(args.unlabeledDataFrame, 'L')
-    lab_OTUTAB, lab_TAXTAB, totAE_OTUTAB = genPhyObject.parseWithTaxonomy(args.labeledDataFrame, 'U')
+    unlab_OTUTAB, unlab_TAXTAB, blank = genPhyObject.parseWithTaxonomy(args.unlabeledDataFrame, 'U')
+    lab_OTUTAB, lab_TAXTAB, totAE_OTUTAB = genPhyObject.parseWithTaxonomy(args.labeledDataFrame, 'L')
     lab_METATAB = genPhyObject.genPhyMetadata('L')
     unlabMETATAB = genPhyObject.genPhyMetadata('U')
 
