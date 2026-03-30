@@ -18,7 +18,7 @@ Outputs:
     - Dataset FPR printed to STDOUT
 
 Usage:
-    python calculate_FDR.py \
+    python calculate_FPR.py \
         -n [sample names lookup table] \
         -p [percolator output] \
         -s [spectra table]
