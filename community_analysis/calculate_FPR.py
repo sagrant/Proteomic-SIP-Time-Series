@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-import pandas as pd
-import numpy as np
-import argparse
-
 '''
 calculate_FPR.py
 
@@ -23,6 +19,9 @@ Usage:
         -p [percolator output] \
         -s [spectra table]
 '''
+
+import pandas as pd
+import argparse
 
 class calculateDataSetFPR():
     """
