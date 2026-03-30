@@ -108,7 +108,7 @@ class generateTraitData():
         self.siprosData = siprosData
         self.percData = percData
 
-    def computeSpectralCounts(dataList, colName):
+    def computeSpectralCounts(self, dataList, colName):
         """
         Calculate total spectral counts or labeled spectral counts of all detected genera
 
@@ -133,16 +133,16 @@ class generateTraitData():
     def parsePercolatorOut(self, namesDict, taxDict, sstatDict):
         abundData = []
         enrichmentValues = []
-        for psm, enrichment, protein, sample in self.percData.itertuples(index = False):
+        for psm, enrichment1, enrichment2, protein, sample in self.percData.itertuples(index = False):
             stripProtein = protein.lstrip('{').rstrip('}')
             sampleName = namesDict.get(sample)
             stat = sstatDict.get(sampleName)
             if stripProtein.startswith('MGYG') and stat != 'Unlabeled':
-                if enrichment >= 2:
+                if enrichment1 >= 2 and enrichment2 >= 2 and enrichment1 <= 100:
                     splitProtein = stripProtein.split(',')[0].split('_')[0]
                     taxonName = taxDict.get(splitProtein)
                     abundData.append(taxonName)
-                    enrichmentValues.append([taxonName, enrichment])
+                    enrichmentValues.append([taxonName, enrichment1])
         
         labeledSpectralCountDf = generateTraitData.computeSpectralCounts(abundData, 'Labeled_Spectral_Count')
         enrichDataDf = pd.DataFrame(enrichmentValues).rename(columns = {0: 'Genus', 1: 'Enrichment'})
@@ -254,7 +254,7 @@ def main():
     k0sLookupDict = k0sDf.to_dict(orient = 'index')
     k0sFunctionDict = {'K00929': 'butyrate kinase', 'K00248':'butyryl-CoA dehydrogenase', 'K00074':'3-hydroxybutyryl-CoA dehydrogenase'}
 
-    pDf = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = [0, 17, 25, 26])
+    pDf = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = [0, 17, 18, 25, 26])
 
     path = args.path
     pathList = os.listdir(path)
