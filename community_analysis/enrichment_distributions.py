@@ -121,7 +121,7 @@ class communityEnrichment():
             for psm, enrichment1, enrichment2, prot, sample in subsampleEnrichData.itertuples(index = False):
                 group = sample.split('.')[0]
                 mouse = int(sample.split('.')[1])
-                ### Only save enrichment values of mouse proteins
+                ### Only save enrichment values of microbial proteins
                 if prot.startswith('{MGYG'):
                     if enrichment2 >= 2 and enrichment1 >= 2 and enrichment1 <= 100:
                         enrichmentValues.append(enrichment1)
