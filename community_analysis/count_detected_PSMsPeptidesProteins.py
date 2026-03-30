@@ -21,7 +21,6 @@ Usage:
 """
 
 import pandas as pd
-import numpy as np
 import argparse
 
 class countDetected():
