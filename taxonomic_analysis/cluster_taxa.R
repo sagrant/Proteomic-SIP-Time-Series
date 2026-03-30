@@ -66,7 +66,7 @@ time <- as.numeric(gsub(".*C(\\d+).*", "\\1", colnames(totalAE.phyloseq.SIG.taxm
 totalAE.phyloseq.SIG.taxmat <- totalAE.phyloseq.SIG.taxmat[, order(time), drop = FALSE]
 
 pheatmap(
-  totalAE.phyloseq.SIG.taxmat,,
+  totalAE.phyloseq.SIG.taxmat,
   color = hcl.colors(50, "YlOrRd"),
   cluster_rows = totalAE.phyloseq.taxmat.clust,
   cluster_cols = FALSE,
