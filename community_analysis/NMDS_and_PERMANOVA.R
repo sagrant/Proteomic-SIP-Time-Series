@@ -57,11 +57,11 @@ colnames(labeledPERMANOVAMetadata.taxon.clr.cecum) <- labeledPhyloseqObj.taxon.c
 #adonis2 needs the metadata table to be ordered the same as the distance matrix
 labeledPERMANOVAMetadata.taxon.clr.O.cecum <- labeledPERMANOVAMetadata.taxon.clr.cecum[order(rownames(labeledPERMANOVAMetadata.taxon.clr.cecum)),] 
 #create a distance matrix from the asv count table of the phyloseq object
-labeledBrayDist.taxon.clr.cecum <- vegdist(t(labeledPhyloseqObj.taxon.clr.cecum@otu_table), method = "euclidean", diag = TRUE) 
-labeledBrayDistMatrix.taxon.clr.cecum <- as.matrix(labeledBrayDist.taxon.clr.cecum)
-labeledPERMANOVAMetadata.taxon.clr.O.cecum <- labeledPERMANOVAMetadata.taxon.clr.cecum[labels(labeledBrayDist.taxon.clr.cecum), , drop = FALSE]
+labeledEuclDist.taxon.clr.cecum <- vegdist(t(labeledPhyloseqObj.taxon.clr.cecum@otu_table), method = "euclidean", diag = TRUE) 
+labeledEuclDistMatrix.taxon.clr.cecum <- as.matrix(labeledEuclDist.taxon.clr.cecum)
+labeledPERMANOVAMetadata.taxon.clr.O.cecum <- labeledPERMANOVAMetadata.taxon.clr.cecum[labels(labeledEuclDist.taxon.clr.cecum), , drop = FALSE]
 
-adonis2(labeledBrayDist.taxon.clr.cecum ~ Time, data = labeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999) 
+adonis2(labeledEuclDist.taxon.clr.cecum ~ Time, data = labeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999) 
 
 ### CLR-TRANSFORM UNLABELED PROTEOME
 unlabeledOTUs.taxon.pseudocounts <- unlabeledTAXONOTUMatrix + 1
@@ -79,8 +79,8 @@ colnames(unlabeledPERMANOVAMetadata.taxon.clr.cecum) <- unlabeledPhyloseqObj.tax
 #adonis2 needs the metadata table to be ordered the same as the distance matrix
 unlabeledPERMANOVAMetadata.taxon.clr.O.cecum  <- unlabeledPERMANOVAMetadata.taxon.clr.cecum[order(rownames(unlabeledPERMANOVAMetadata.taxon.clr.cecum)),]
 #create a distance matrix from the asv count table of the phyloseq object
-unlabeledBrayDist.taxon.clr.cecum <- vegdist(t(unlabeledPhyloseqObj.taxon.clr.cecum@otu_table), method = "euclidean", diag = TRUE)
-unlabeledBrayDistMatrix.taxon.clr.cecum <- as.matrix(unlabeledBrayDist.taxon.clr.cecum)
-unlabeledPERMANOVAMetadata.taxon.clr.O.cecum <- unlabeledPERMANOVAMetadata.taxon.clr.cecum[labels(unlabeledBrayDist.taxon.clr.cecum), , drop = FALSE]
+unlabeledEuclDist.taxon.clr.cecum <- vegdist(t(unlabeledPhyloseqObj.taxon.clr.cecum@otu_table), method = "euclidean", diag = TRUE)
+unlabeledEuclDistMatrix.taxon.clr.cecum <- as.matrix(unlabeledEuclDist.taxon.clr.cecum)
+unlabeledPERMANOVAMetadata.taxon.clr.O.cecum <- unlabeledPERMANOVAMetadata.taxon.clr.cecum[labels(unlabeledEuclDist.taxon.clr.cecum), , drop = FALSE]
 
-adonis2(unlabeledBrayDist.taxon.clr.cecum ~ Time, data = unlabeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999)
+adonis2(unlabeledEuclDist.taxon.clr.cecum ~ Time, data = unlabeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999)
