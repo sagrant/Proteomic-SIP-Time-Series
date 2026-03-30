@@ -29,7 +29,7 @@ Notes:
     number of labeled PSMs that would be assigned to a genus under random conditions, N PSMs get 
     randomly sampled without replacement from the aggregated dataset, and the number of labeled 
     PSMs in the random sample was recorded. This test gets conducted 1,000 times per genus. Observed 
-    labeled PSM counts were compared to the median number of labeled PSMs in the null distribution. 
+    labeled PSM counts were compared to the maximum number of labeled PSMs in the null distribution. 
 
 """
 import pandas as pd
