@@ -24,7 +24,8 @@ Usage:
         -t [significantly labeled taxa]
 
 Notes:
-    [insert justification for thresholds]
+    Thresholds used to determine which taxa should be included were set 
+    based on the clustering results produced by cluster_taxa.R
     
 """
 
@@ -245,10 +246,6 @@ class plotGenera():
         scValuesList : list
             List of all spectral count values that will be included in plot. 
             Used for determining max spectral count value to display in legend. 
-
-        Notes
-        -----
-        [insert threshold justification]
         """
         taxa2use = []
         aeValuesList = []
