@@ -42,6 +42,9 @@ The gut microbiome is closely related to host health and plays a major role in h
 ## Directory structure
 ```
 ├── images
+├── metadata
+│   ├── KOs_dict.csv
+│   └── sample_dict.csv
 ├── community_analysis
 │   ├── count_detected_PSMsPeptidesProteins.py
 │   ├── calculate_FPR.py
