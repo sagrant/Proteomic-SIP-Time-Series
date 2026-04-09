@@ -119,7 +119,7 @@ class computeTaxonSpectralCounts():
         self.oDict = oDict
         self.linDict = linDict
 
-    def parseAbundance(self, df, status):
+    def parseAbundance(self, df, status, taxDict):
         """
         Parse labeled or unlabeled proteome data
 
@@ -154,48 +154,23 @@ class computeTaxonSpectralCounts():
             if 'C' in sampleName and sampleStatus in status:
                 if stripProtein.startswith('MGYG'):
                     splitProtein = stripProtein.split(',')
+                    genus = taxDict.get(splitProtein[0].split('_')[0])
                     ### Append first protein in list of proteins 
                     ### if it's a degenerate protein, first entry is saved
-                    abundData.append([splitProtein[0], sampleName])
-    
-        abundDataDf = pd.DataFrame(abundData).rename(columns = {0: 'Protein', 1: 'Sample'})
+                    abundData.append([genus, sampleName])
 
+        abundDataDf = pd.DataFrame(abundData).rename(columns = {0: 'Genus', 1: 'Sample'})
         ### Make sure samples are in chronological order
         abundDataDf['Order'] = abundDataDf['Sample'].map(self.oDict)
         abundDataDf = abundDataDf.sort_values(by = 'Order').drop('Order', axis = 1)
 
         ### Use groupby function to compute spectral count of proteins, assume each PSM represents one spectral count
-        gbProtein = abundDataDf.groupby(['Protein', 'Sample'], sort = False).size().reset_index()
+        gbProtein = abundDataDf.groupby(['Genus', 'Sample'], sort = False).size().reset_index()
         gbProtein['Group'] = gbProtein['Sample'].map(self.gDict)
-        transformSCDf = pd.pivot_table(gbProtein, index = 'Protein', columns = ['Sample', 'Group'], aggfunc = 'sum', sort = False).fillna(0)
+        transformSCDf = pd.pivot_table(gbProtein, index = 'Genus', columns = ['Sample', 'Group'], aggfunc = 'sum', sort = False).fillna(0)
         transformSCDf.columns = transformSCDf.columns.droplevel()
         return transformSCDf
     
-    def insertTaxonomy(self, scDf):
-        """
-        Insert genera names associated with each protein into dataframe
-
-        Parameters
-        ----------
-        scDf : pandas.DataFrame
-            DataFrame with samples as columns, index as protein IDs, and values as spectral counts
-
-        Returns
-        -----
-        gbTaxon : pandas.DataFrame
-            Spectral counts summarized at the genus level
-        """
-        taxonomyData = {}
-        for proteinID, sampleData in scDf.iterrows():
-            taxonID = proteinID.split('_')[0]
-            taxon = self.linDict.get(taxonID)
-            taxonomyData[proteinID] = taxon
-        scDf = scDf.reset_index()
-        scDf['Taxon'] = scDf['Protein'].map(taxonomyData)
-        scDf = scDf.set_index('Taxon').drop('Protein', axis = 1, level = 0).reset_index()
-        gbTaxon = scDf.groupby('Taxon').sum()
-        return gbTaxon
-
     def computeProportions(self, spectralCountDf):
         """
         Normalize raw spectral count data by transforming them into proportions
@@ -214,7 +189,7 @@ class computeTaxonSpectralCounts():
         totalAbundances = spectralCountDf.sum(axis = 1)
         abundantTaxa = totalAbundances.nlargest(8).index
         mostAbundantTaxaGb = spectralCountDf.loc[abundantTaxa]
-
+        
         ### Summarize proportion of spectral counts assigned to less abundant taxa as "Other"
         others = spectralCountDf.loc[~spectralCountDf.index.isin(abundantTaxa)].sum()
         otherRowData = others.to_dict()
@@ -242,6 +217,7 @@ class computeTaxonSpectralCounts():
         """
         allTaxa = df1.index.values.tolist() + df2.index.values.tolist()
         uniqueTaxa = pd.Series(allTaxa).drop_duplicates().values.tolist()
+
         colors = [
                 "lightblue",
                 "steelblue",
@@ -347,14 +323,11 @@ def main():
     taxonomyLookupDict = parseMeta.parseMGYGData(args.metadata)
 
     parseSCs = computeTaxonSpectralCounts(sampleDict, groupDict, statusDict, ordDict, taxonomyLookupDict)
-    labSpectralCountDf = parseSCs.parseAbundance(labeledData, ['Labeled'])
-    unlabSpecralCountDf = parseSCs.parseAbundance(unlabeledData, ['Labeled', 'Unlabeled'])
-    
-    labTaxaSCDf = parseSCs.insertTaxonomy(labSpectralCountDf)
-    unlabTaxaSCDf = parseSCs.insertTaxonomy(unlabSpecralCountDf)
+    labSpectralCountDf = parseSCs.parseAbundance(labeledData, ['Labeled'], taxonomyLookupDict)
+    unlabSpecralCountDf = parseSCs.parseAbundance(unlabeledData, ['Labeled', 'Unlabeled'], taxonomyLookupDict)
 
-    labeledTaxonProportions = parseSCs.computeProportions(labTaxaSCDf)
-    unlabeledTaxonProportions = parseSCs.computeProportions(unlabTaxaSCDf)
+    labeledTaxonProportions = parseSCs.computeProportions(labSpectralCountDf)
+    unlabeledTaxonProportions = parseSCs.computeProportions(unlabSpecralCountDf)
 
     colorMapDict = parseSCs.assignColors(labeledTaxonProportions, unlabeledTaxonProportions)
     
@@ -365,7 +338,7 @@ def main():
     parseSCs.plotTaxa(labeledTaxonProportions, colorMapDict, ax[1], "Labeled Spectral Counts")
 
     parseSCs.plotLegend(ax)
-    plt.show()
+    # plt.show()
 
 if __name__ == "__main__":
     main()
