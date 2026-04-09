@@ -49,11 +49,9 @@ def sampleMetadata(namesDict):
     sampleLookup = pd.read_csv(namesDict)
     sampleLookupDict = sampleLookup.to_dict(orient = 'index')
     sampleNameDict = {}
-    orderDict = {}
     for sampleID, sampleName in sampleLookupDict.items():
         sampleNameDict[sampleName['FileName']] = sampleName['SampleName']
-        orderDict[sampleName['SampleName']] = int(sampleName['SampleName'].split('.')[1])
-    return sampleNameDict, orderDict
+    return sampleNameDict
 
 class communityEnrichment():
     """
@@ -92,7 +90,7 @@ class communityEnrichment():
         subsampleSize = sampleSizesDf['Sample_Size'].min()
         return subsampleSize
 
-    def parse13CEnrichment(self, n, oDict):
+    def parse13CEnrichment(self, n):
         """
         Parse enrichment values of labeled PSMs for all samples
 
@@ -124,13 +122,12 @@ class communityEnrichment():
                 ### Only save enrichment values of microbial proteins
                 if prot.startswith('{MGYG'):
                     if enrichment2 >= 2 and enrichment1 >= 2 and enrichment1 <= 100:
-                        enrichmentValues.append(enrichment1)
+                        enrichmentValues.append(enrichment2)
                         graphName.append(sample)
             plotEnrichmentData.append([enrichmentValues, graphName[0], group, mouse])
         df = pd.DataFrame(plotEnrichmentData, columns = ['Values', 'Sample', 'Group', 'Mouse'])
-        df['Order'] = df['Sample'].map(oDict)
         ### Sort samples in chronological order
-        df = df.sort_values(by = 'Order')
+        df = df.sort_values(by = 'Mouse')
         return df
 
     def generateColorMap(self, mouseList):
@@ -184,14 +181,14 @@ class communityEnrichment():
             Color dict used to map colors to specific mice
         """
         fig, ax = plt.subplots(5, 1, figsize = (7, 8))
-        plt.subplots_adjust(left = 0.09, bottom = 0.06, top = 0.95, right = 0.85)
+        plt.subplots_adjust(left = 0.09, bottom = 0.06, top = 0.95, right = 0.85, hspace=0.5)
 
         enrichData['Color'] = enrichData['Mouse'].map(colorDict)
         ### plot each group, each with 3 mice, on its own subplot
         gbGroup = enrichData.groupby('Group', sort = False)
 
         for (groupName, enrichmentValueData), axis in zip(gbGroup, ax.flatten()):
-            for values, samp, gp, mouse, order, colr in enrichmentValueData.itertuples(index = False):
+            for values, samp, gp, mouse, colr in enrichmentValueData.itertuples(index = False):
                 axis.hist(values, bins = 50, alpha = 0.9, log = True, label = mouse, color = colr, histtype = 'step', linewidth = 1.3)
                 axis.set_title(gp)
                 axis.set_xticks([0, 20, 40, 60, 80, 100])
@@ -218,7 +215,7 @@ class communityEnrichment():
         handles = legendDf['Handles'].values.tolist()
         labels = legendDf['Labels'].values.tolist()
 
-        plt.legend(handles, labels, bbox_to_anchor=(1.19,4), title='Replicate', fontsize = 10)
+        plt.legend(handles, labels, bbox_to_anchor=(1.19,4), title='Mouse', fontsize = 10)
         plt.show()
 
 
@@ -228,7 +225,7 @@ def main():
     parser.add_argument('-n', '--names')
     args = parser.parse_args()
 
-    sDict, orDict = sampleMetadata(args.names)
+    sDict = sampleMetadata(args.names)
 
     path = args.path
     pathList = os.listdir(path)
@@ -247,7 +244,7 @@ def main():
     
     community13C = communityEnrichment(dfs)
     subsampleValue = community13C.calculateSubsampleSize(cLines)
-    data = community13C.parse13CEnrichment(subsampleValue, orDict)
+    data = community13C.parse13CEnrichment(subsampleValue)
     colorProfile = community13C.generateColorMap(data['Mouse'].unique())
     community13C.plotEnrichmentDistributions(data, colorProfile)
     
