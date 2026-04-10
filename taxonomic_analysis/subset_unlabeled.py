@@ -47,10 +47,10 @@ class subsetUnlabeledProteins():
             unlabeledConcatDf : pandas.DataFrame
                 DataFrame containing all unlabeled PSMs for all samples
             """
-            concatDf = pd.concat(self.sipDfsList)            
+            concatDf = pd.concat(self.sipDfsList)         
             unlabeledPSMsList = []
             for fields in concatDf.itertuples(index = False):
-                if fields[26].startswith('{MGYG') and fields[17] < 2 and fields[18] < 2 and fields[17] <= 100:
+                if fields[26].startswith('{MGYG') and fields[17] < 2 and fields[18] < 2:
                     unlabeledPSMsList.append(fields[0])
             concatDf = concatDf.set_index('PSMId')
             unlabeledConcatDf = concatDf.loc[unlabeledPSMsList]
