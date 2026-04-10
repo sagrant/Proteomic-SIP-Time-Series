@@ -103,7 +103,7 @@ class nullDistributions():
             splitLineage = lineage.split(';')
             ### splitLineage is a list that can be indexed to get any taxonomic rank in the lineage
             ### Index 5 corresponds to genera 
-            lineageDict[isolate] = splitLineage[5]
+            lineageDict[isolate] = splitLineage[5].split('__')[1]
         return lineageDict
 
     def parseSIPfile(self, dfs, linDict):
