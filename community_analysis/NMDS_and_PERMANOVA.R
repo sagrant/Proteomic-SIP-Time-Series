@@ -8,15 +8,15 @@ library(compositions)
 ### Generate phyloseq objects
 ### These input files are generated with generate_phyloseq.py
 
-unlabTAXONMetadata <- read.csv("metadata_table_unlab.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
-labTAXONMetadata <- read.csv("metadata_table_lab.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
+unlabTAXONMetadata <- read.csv("unlabeled_metadata.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
+labTAXONMetadata <- read.csv("labeled_metadata.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
 unlabTAXONMetadata$Name <- rownames(unlabTAXONMetadata)
 labTAXONMetadata$Name <- rownames(labTAXONMetadata)
 
 unlabeledTAXONTaxonomyTable <- read.csv("unlabeled_taxonomy_table.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
 labeledTAXONTaxonomyTable <- read.csv("labeled_taxonomy_table.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
-unlabeledTAXONOTUTable <- read.csv("unlabeled_otu_table.csv", row.names = 1, header=T, check.names=FALSE)
-labeledTAXONOTUTable <- read.csv("labeled_otu_table.csv", row.names = 1, header=T, check.names=FALSE)
+unlabeledTAXONOTUTable <- read.csv("unlabeled_OTU_table.csv", row.names = 1, header=T, check.names=FALSE)
+labeledTAXONOTUTable <- read.csv("labeled_OTU_table.csv", row.names = 1, header=T, check.names=FALSE)
 
 labeledTAXONTaxonomyMatrix <- tax_table(as.matrix(labeledTAXONTaxonomyTable))
 labeledTAXONOTUMatrix <- otu_table(as.matrix(labeledTAXONOTUTable), taxa_are_rows = TRUE)
@@ -28,8 +28,8 @@ labeledTAXONSampleData = sample_data(labTAXONMetadata)
 labeledPhyloseqObj.taxon <- phyloseq(labeledTAXONTaxonomyMatrix, labeledTAXONOTUMatrix, labeledTAXONSampleData)
 unlabeledPhyloseqObj.taxon <- phyloseq(unlabeledTAXONTaxonomyMatrix, unlabeledTAXONOTUMatrix, unlabeledTAXONSampleData)
 
-labeledPhyloseqObj.taxon.cecum <- subset_samples(labeledPhyloseqObj.taxon, Type == "Cecum")
-unlabeledPhyloseqObj.taxon.cecum <- subset_samples(unlabeledPhyloseqObj.taxon, Type == "Cecum")
+labeledPhyloseqObj.taxon.cecum <- subset_samples(labeledPhyloseqObj.taxon, SampleType == "C")
+unlabeledPhyloseqObj.taxon.cecum <- subset_samples(unlabeledPhyloseqObj.taxon, SampleType == "C")
 
 ########## NMDS 
 labeledNMDS.taxon.cecum <- ordinate(labeledPhyloseqObj.taxon.cecum, "NMDS", "bray")
@@ -46,8 +46,7 @@ labeledOTUs.taxon.pseudocounts <- labeledTAXONOTUMatrix + 1
 labeledOTUs.taxon.clrTransformed <- t(clr(acomp(t(labeledOTUs.taxon.pseudocounts))))
 labeledOTUTable.taxon.clrTransformed <- otu_table(labeledOTUs.taxon.clrTransformed, taxa_are_rows = TRUE)
 labeledPhyloseqObj.taxon.clr <- phyloseq(labeledTAXONTaxonomyMatrix, labeledOTUTable.taxon.clrTransformed, labeledTAXONSampleData)
-labeledPhyloseqObj.taxon.clr.stool <- subset_samples(labeledPhyloseqObj.taxon.clr, Type == "Stool")
-labeledPhyloseqObj.taxon.clr.cecum <- subset_samples(labeledPhyloseqObj.taxon.clr, Type == "Cecum")
+labeledPhyloseqObj.taxon.clr.cecum <- subset_samples(labeledPhyloseqObj.taxon.clr, SampleType == "C")
 
 ### SET UP LABELED PROTEOME PERMANOVA
 labeledPERMANOVAMetadata.taxon.clr.cecum <- as.data.frame(labeledPhyloseqObj.taxon.clr.cecum@sam_data@.Data) 
@@ -68,8 +67,7 @@ unlabeledOTUs.taxon.pseudocounts <- unlabeledTAXONOTUMatrix + 1
 unlabeledOTUs.taxon.clrTransformed <- t(clr(acomp(t(unlabeledOTUs.taxon.pseudocounts))))
 unlabeledOTUTable.taxon.clrTransformed <- otu_table(unlabeledOTUs.taxon.clrTransformed, taxa_are_rows = TRUE)
 unlabeledPhyloseqObj.taxon.clr <- phyloseq(unlabeledTAXONTaxonomyMatrix, unlabeledOTUTable.taxon.clrTransformed, unlabeledTAXONSampleData)
-unlabeledPhyloseqObj.taxon.clr.stool <- subset_samples(unlabeledPhyloseqObj.taxon.clr, Type == "Stool")
-unlabeledPhyloseqObj.taxon.clr.cecum <- subset_samples(unlabeledPhyloseqObj.taxon.clr, Type == "Cecum")
+unlabeledPhyloseqObj.taxon.clr.cecum <- subset_samples(unlabeledPhyloseqObj.taxon.clr, SampleType == "C")
 
 ### SET UP UNLABELED PROTEOME PERMANOVA
 unlabeledPERMANOVAMetadata.taxon.clr.cecum <- as.data.frame(unlabeledPhyloseqObj.taxon.clr.cecum@sam_data@.Data)
@@ -84,3 +82,4 @@ unlabeledEuclDistMatrix.taxon.clr.cecum <- as.matrix(unlabeledEuclDist.taxon.clr
 unlabeledPERMANOVAMetadata.taxon.clr.O.cecum <- unlabeledPERMANOVAMetadata.taxon.clr.cecum[labels(unlabeledEuclDist.taxon.clr.cecum), , drop = FALSE]
 
 adonis2(unlabeledEuclDist.taxon.clr.cecum ~ Time, data = unlabeledPERMANOVAMetadata.taxon.clr.O.cecum, permutations = 999)
+
