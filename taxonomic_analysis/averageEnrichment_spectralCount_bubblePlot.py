@@ -75,17 +75,48 @@ class parseSIPData():
         sampleLookup = pd.read_csv(namesDictIn)
         sampleLookupDict = sampleLookup.to_dict(orient = 'index')
         groupDict = {}
+        orderDict = {}
         sampStatDict = {}
         for sampleID, sampleName in sampleLookupDict.items():
             group = sampleName['SampleName'].split('.')
             groupDict[sampleName['FileName']] = group[0]
+            orderDict[group[0]] = int(group[1])
             if '0' in sampleName['SampleName'].split('.')[0]:
                 sampStatDict[group[0]] = 'Unlabeled'
             else:
                 sampStatDict[group[0]] = 'Labeled'
-        return groupDict, sampStatDict
+        return groupDict, sampStatDict, orderDict
 
-    def parseInFile(self, treatmentGroupDict, statDict):
+    def parseMGYGData(self, metadata):
+        """
+        Parse MGYG metadata file into dictionary that can be used to retrieve genus names for each taxon ID
+
+        Parameters
+        ----------
+        metadata : file path to MGYG metadata CSV
+            CSV file contains many fields, here we only read in the taxon ID and full lineage with taxon names
+
+        Returns 
+        -------
+        lineageDict : dict 
+            Lookup dict to get genus name for each taxon ID
+        """
+        metadataDf = pd.read_csv(metadata, sep = '\t', header = 0, usecols = ['Genome', 'Lineage'])
+        lineageDict = {}
+        for isolate, lineage in metadataDf.itertuples(index = False):
+            splitLineage = lineage.split(';')
+            ### splitLineage is a list that can be indexed to get any taxonomic rank in the lineage
+            ### Index 5 corresponds to genera 
+            lineageDict[isolate] = splitLineage[5].split('__')[1]
+        return lineageDict
+
+    def sortSamples(df, sortDict):
+        df['Order'] = df['Sample'].map(sortDict)
+        df = df.sort_values(by = 'Order').drop('Order', axis = 1)
+        return df
+        
+    
+    def parseInFile(self, treatmentGroupDict, statDict, taxDict, sDict):
         """
         Parse Percolator output into 2 DataFrames with spectral count data or average enrichment data
 
@@ -114,89 +145,38 @@ class parseSIPData():
         -----
         Including degenerate proteins - uses first degenerate entry in list of possible protein matches
         Only includes microbial PSMs
-        Excludes all unlabeled samples    
+        Excludes all unlabeled samples
         """
         enrichData = []
         countData = []
-        for psm, enrich, ms2, protein, sample in self.SIPdf.itertuples(index = False):
+        for psm, ms1, protein, sample in self.SIPdf.itertuples(index = False):
             stripProtein = protein.lstrip('{').rstrip('}')
             treatment = treatmentGroupDict.get(sample)
             labStat = statDict.get(treatment)
-            if stripProtein.startswith('MGYG') and labStat != 'Unlabeled':
+            if stripProtein.startswith('MGYG') and labStat != 'Unlabeled' and treatment.startswith('C'):
                 splitProtein = stripProtein.split(',')[0]
-                countData.append([splitProtein, treatment])
-                if enrich <= 100:
-                    enrichData.append([splitProtein, treatment, enrich])
+                genus = taxDict.get(splitProtein.split('_')[0])
+                countData.append([genus, treatment])
+                if ms1 <= 100:
+                    enrichData.append([genus, treatment, ms1])
 
-        enrichDataDf = pd.DataFrame(enrichData).rename(columns = {0: 'Protein', 1: 'Sample', 2: 'Enrichment'})
+        enrichDataDf = pd.DataFrame(enrichData).rename(columns = {0: 'Genus', 1: 'Sample', 2: 'Enrichment'})
+        sortedEnrichDataDf = parseSIPData.sortSamples(enrichDataDf, sDict)
         ### Get average enrichment of each protein
-        t_avgEnrichmentDf = pd.pivot_table(enrichDataDf, index = 'Protein', columns = 'Sample', values = ['Enrichment'], aggfunc = 'mean').fillna(0)
+        t_avgEnrichmentDf = pd.pivot_table(sortedEnrichDataDf, index = 'Genus', columns = 'Sample', values = ['Enrichment'], aggfunc = 'median', sort = False).fillna(0)
 
-        abundDataDf = pd.DataFrame(countData).rename(columns = {0: 'Protein', 1: 'Sample'})
+        abundDataDf = pd.DataFrame(countData).rename(columns = {0: 'Genus', 1: 'Sample'})
+        sortedAbundDataDf = parseSIPData.sortSamples(abundDataDf, sDict)
         ### Assume each row in SIPdf represents 1 PSM
-        spectralCountDf = pd.DataFrame(abundDataDf.groupby(['Sample', 'Protein']).size())
+        spectralCountDf = pd.DataFrame(sortedAbundDataDf.groupby(['Sample', 'Genus'], sort = False).size())
         ### Get sum of spectral counts for each protein
-        t_spectralCountDf = pd.pivot_table(spectralCountDf, index = 'Protein', columns = 'Sample', aggfunc = 'sum').fillna(0)
+        t_spectralCountDf = pd.pivot_table(spectralCountDf, index = 'Genus', columns = 'Sample', aggfunc = 'sum', sort = False).fillna(0)
+
+        t_avgEnrichmentDf.columns = t_avgEnrichmentDf.columns.droplevel()
+        t_spectralCountDf.columns = t_spectralCountDf.columns.droplevel()
+        t_avgEnrichmentDf = t_avgEnrichmentDf.sort_index()
+        t_spectralCountDf = t_spectralCountDf.sort_index()
         return t_spectralCountDf, t_avgEnrichmentDf
-
-    def parseMGYGData(self, metadata):
-        """
-        Parse MGYG metadata file into dictionary that can be used to retrieve genus names for each taxon ID
-
-        Parameters
-        ----------
-        metadata : file path to MGYG metadata CSV
-            CSV file contains many fields, here we only read in the taxon ID and full lineage with taxon names
-
-        Returns 
-        -------
-        lineageDict : dict 
-            Lookup dict to get genus name for each taxon ID
-        """
-        metadataDf = pd.read_csv(metadata, sep = '\t', header = 0, usecols = ['Genome', 'Lineage'])
-        lineageDict = {}
-        for isolate, lineage in metadataDf.itertuples(index = False):
-            splitLineage = lineage.split(';')
-            ### splitLineage is a list that can be indexed to get any taxonomic rank in the lineage
-            ### Index 5 corresponds to genera 
-            lineageDict[isolate] = splitLineage[5]
-        return lineageDict
-
-    def insertTaxonomy(self, df, dataType, taxonomyDict):
-        """
-        Insert taxon names into average enrichment and spectral count DataFrames
-
-        Parameters
-        ----------
-        df : pandas.DataFrame 
-            Average enrichment or spectral count dataframe where columns are samples and indices are protein IDs
-
-        dataType: str
-            Indicates if aggfunc used to summarize data at the taxon level should be 
-            mean (average enrichement) or sum (spectral counts)
-
-        taxonomyDict : dict
-            Lookup dict with taxon IDs --> genus names ouput by parseMGYGData()
-
-        Returns 
-        -------
-        gb : pandas.DataFrame
-            DataFrame with average enrichment or spectral count values summarized at the taxon level
-        """
-        taxonomyData = {}
-        for proteinID, sampleData in df.iterrows():
-            taxonID = proteinID.split('_')[0]
-            taxon = taxonomyDict.get(taxonID)
-            ### Need to generate a dictionary that contains protein IDs --> genus names
-            taxonomyData[proteinID] = taxon 
-        df = df.reset_index()
-        df['Taxon'] = df['Protein'].map(taxonomyData)
-        df = df.set_index('Taxon').drop('Protein', axis = 1, level = 0).reset_index()
-        if dataType == 'spectral_counts':
-            gb = df.groupby('Taxon').sum()
-        if dataType == 'average_enrichment':
-            gb = df.groupby('Taxon').mean()
-        return gb
 
 class plotGenera():
     """
@@ -257,12 +237,14 @@ class plotGenera():
         spectCountThresh = 50
         for (taxon_e, *samples_e), (taxon_s, *samples_s) in zip(self.averageEnrichmentData.itertuples(), self.spectralCountData.itertuples()):
             if taxon_e == taxon_s and taxon_e in self.sigLabeledTaxa['Taxon'].values:
-                if (not all(specc < minSpectralCountThresh for specc in samples_s) and any(specc > spectCountThresh for specc in samples_s)) or (not all(specc < minSpectralCountThresh for specc in samples_s) and any(maxAvgEn > avgen > avgEnThresh for avgen in samples_e)):
+                if (not all(specc < minSpectralCountThresh for specc in samples_s) and any(specc > spectCountThresh for specc in samples_s)) or \
+                    (not all(specc < minSpectralCountThresh for specc in samples_s) and any(maxAvgEn > avgen > avgEnThresh for avgen in samples_e)):
                     taxa2use.append(taxon_e)
-                    for num in samples_e:
-                        aeValuesList.append(num)
-                    for num in samples_s:
-                        scValuesList.append(num)
+                    for e in samples_e:
+                        if e > 0:
+                            aeValuesList.append(e)
+                    for s in samples_s:
+                        scValuesList.append(s)
         return taxa2use, aeValuesList, scValuesList
 
     def plotBubblePlot(self, enrichmentVals, spectCountVals, taxa):
@@ -284,14 +266,8 @@ class plotGenera():
         vmin = min(enrichmentVals)
         vmax = max(enrichmentVals)
         norm = Normalize(vmin=vmin, vmax=vmax) 
-        
-        plotTaxa = pd.Series(taxa).drop_duplicates().values.tolist()
-        self.spectralCountData.columns = self.spectralCountData.columns.droplevel(0)
-        self.averageEnrichmentData.columns = self.averageEnrichmentData.columns.droplevel(0)
-        ### Organize columns based on time point so x axis is chronological
-        self.spectralCountData = self.spectralCountData.reindex(['C6', 'C12', 'C18', 'C24'], axis=1)
-        self.averageEnrichmentData = self.averageEnrichmentData.reindex(['C6', 'C12', 'C18', 'C24'], axis=1)
 
+        plotTaxa = pd.Series(taxa).drop_duplicates().values.tolist()
         ylocs = []
         ylabs = []
         cmin = 0
@@ -300,8 +276,10 @@ class plotGenera():
         for i1, (taxon) in enumerate(plotTaxa):
             # get series with average enrichment for each taxon
             enrichmentData = self.averageEnrichmentData.loc[taxon] 
+            # print(enrichmentData)
             # get series with sum spectral counts for each taxon
             countData = self.spectralCountData.loc[taxon] 
+            # print(countData)
             ylocs.append(i1) 
             ylabs.append(taxon)
             ### iterate over each series with enrichment or spectral count data of all samples
@@ -309,7 +287,7 @@ class plotGenera():
                 ### scale size factor
                 sval = minS + (maxS - minS) * (cData - cmin) / (cmax - cmin) if cmax > cmin else minS
                 if cData == 0:
-                    plt.scatter(i2, i1, s = sval,  c = 'white', norm = norm)
+                    plt.scatter(i2, i1, s = sval, c = 'white')
                 else:
                     plt.scatter(i2, i1, s = sval, c = [eData], cmap = self.colormap, norm = norm)
 
@@ -327,11 +305,12 @@ class plotGenera():
         for c in exampleCounts:
             sval = minS + (maxS - minS) * (c - cmin) / (cmax - cmin) if cmax > cmin else minS
             handles.append(ax.scatter([], [], s=sval, color="gray", alpha=0.6))
+        
         labels = [f"{int(c)}" for c in exampleCounts]
         sm = ScalarMappable(norm=norm, cmap=self.colormap)
         sm.set_array([])
         ax.legend(handles, labels, title="Spectral Count", scatterpoints=1, frameon=False, labelspacing=2.5, bbox_to_anchor=(1.4,1.02))
-        fig.colorbar(sm, ax=ax, label='Average Enrichment')
+        fig.colorbar(sm, ax=ax, label='Median Enrichment')
         plt.show()
 
 def main():
@@ -342,19 +321,16 @@ def main():
     parser.add_argument('-t', '--sigtaxa')
     args = parser.parse_args()
 
-    colormap = LinearSegmentedColormap.from_list("colorList", ["gold", "orange", "crimson"])
-    sipData = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = [0, 17, 18, 25, 26])
+    colormap = LinearSegmentedColormap.from_list("colorList", ["paleturquoise", "skyblue", "royalblue", "blue", 'navy'])
+    sipData = pd.read_csv(args.inFile, sep = '\t', header = 0, usecols = [0, 16, 25, 26])
     sigLabeledTaxa = pd.read_csv(args.sigtaxa, names=['Taxon'])
 
     dataParser = parseSIPData(sipData)
-    groupDict, statusDict = dataParser.sampleMetadata(args.namesDict)
+    groupDict, statusDict, ordDict = dataParser.sampleMetadata(args.namesDict)
     taxonomyLookupDict = dataParser.parseMGYGData(args.metadata)
-    spectralCounts, averageEnrichment = dataParser.parseInFile(groupDict, statusDict)
+    spectralCounts, averageEnrichment = dataParser.parseInFile(groupDict, statusDict, taxonomyLookupDict, ordDict)
 
-    taxonSpectralCounts = dataParser.insertTaxonomy(spectralCounts, 'spectral_counts', taxonomyLookupDict)
-    taxonAverageEnrichment = dataParser.insertTaxonomy(averageEnrichment, 'average_enrichment', taxonomyLookupDict)
-
-    chooser = plotGenera(taxonAverageEnrichment, taxonSpectralCounts, sigLabeledTaxa, colormap)
+    chooser = plotGenera(averageEnrichment, spectralCounts, sigLabeledTaxa, colormap)
     genera, avgEnValues, spectCountValues = chooser.chooseGenera()
     chooser.plotBubblePlot(avgEnValues, spectCountValues, genera)
 
