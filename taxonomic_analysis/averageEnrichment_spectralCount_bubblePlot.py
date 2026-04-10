@@ -163,7 +163,7 @@ class parseSIPData():
         enrichDataDf = pd.DataFrame(enrichData).rename(columns = {0: 'Genus', 1: 'Sample', 2: 'Enrichment'})
         sortedEnrichDataDf = parseSIPData.sortSamples(enrichDataDf, sDict)
         ### Get average enrichment of each protein
-        t_avgEnrichmentDf = pd.pivot_table(sortedEnrichDataDf, index = 'Genus', columns = 'Sample', values = ['Enrichment'], aggfunc = 'median', sort = False).fillna(0)
+        t_avgEnrichmentDf = pd.pivot_table(sortedEnrichDataDf, index = 'Genus', columns = 'Sample', values = ['Enrichment'], aggfunc = 'mean', sort = False).fillna(0)
 
         abundDataDf = pd.DataFrame(countData).rename(columns = {0: 'Genus', 1: 'Sample'})
         sortedAbundDataDf = parseSIPData.sortSamples(abundDataDf, sDict)
@@ -310,7 +310,7 @@ class plotGenera():
         sm = ScalarMappable(norm=norm, cmap=self.colormap)
         sm.set_array([])
         ax.legend(handles, labels, title="Spectral Count", scatterpoints=1, frameon=False, labelspacing=2.5, bbox_to_anchor=(1.4,1.02))
-        fig.colorbar(sm, ax=ax, label='Median Enrichment')
+        fig.colorbar(sm, ax=ax, label='Average Enrichment')
         plt.show()
 
 def main():
