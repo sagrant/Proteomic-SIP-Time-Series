@@ -338,7 +338,7 @@ def main():
     parseSCs.plotTaxa(labeledTaxonProportions, colorMapDict, ax[1], "Labeled Spectral Counts")
 
     parseSCs.plotLegend(ax)
-    # plt.show()
+    plt.show()
 
 if __name__ == "__main__":
     main()
