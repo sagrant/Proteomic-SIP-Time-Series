@@ -3,14 +3,14 @@ library(phyloseq)
 library(pheatmap)
 
 ### Read in files output by generate_phyloseq.py
-labeled.metadata <- read.csv("finished_scripts/labMeta.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
+labeled.metadata <- read.csv("labeled_metadata.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
 labeled.metadata$Name <- rownames(labeled.metadata)
 labeled.SampleData = sample_data(labeled.metadata)
 
-labeled.taxonomy.table <- read.csv("finished_scripts/labTax.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
+labeled.taxonomy.table <- read.csv("labeled_taxonomy_table.csv", header=T, row.names = 1, na.strings = c("NA", "ND"))
 
-labeled.OTU.table <- read.csv("finished_scripts/labOTU.csv", row.names = 1, header=T, check.names=FALSE)
-AE.OTU.table <- read.csv("finished_scripts/totAE.csv", row.names = 1, header=T, check.names=FALSE)
+labeled.OTU.table <- read.csv("labeled_OTU_table.csv", row.names = 1, header=T, check.names=FALSE)
+AE.OTU.table <- read.csv("total_averageEnrichmentOTU_table.csv", row.names = 1, header=T, check.names=FALSE)
 
 ### Values = labeled spectral counts
 labeled.taxonomy.mat <- tax_table(as.matrix(labeled.taxonomy.table))
@@ -76,4 +76,3 @@ pheatmap(
   border_color = "white",
   main = 'Average Enrichment'
 )
-
