@@ -231,7 +231,7 @@ class plotGenera():
         aeValuesList = []
         scValuesList = []
         ### Set thresholds
-        minSpectralCountThresh = 10
+        minSpectralCountThresh = 14
         avgEnThresh = 25
         maxAvgEn = 95
         spectCountThresh = 50
