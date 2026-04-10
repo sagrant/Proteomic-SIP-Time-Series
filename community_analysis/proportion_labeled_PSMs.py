@@ -100,6 +100,7 @@ class calculateProportions():
             Summarized at the treatment group level 
         """
         countDataBySample = []
+        
         for sampleData in self.dfsList:
             totalPSMs = 0
             labeledPSMs = 0
@@ -138,7 +139,7 @@ class calculateProportions():
 
         labSTDVs = []
         for groupData in sampleData.groupby('Group', sort = False):
-            stdv_lab = np.std(groupData[1]['Labeled_PSMs']/groupData[1]['Total_PSMs'])
+            stdv_lab = np.std(groupData[1]['Proportion_Labeled'])
             labSTDVs.append(stdv_lab)
 
         axs.bar(list(range(len(gbGroup.index))), gbGroup['Proportion_Labeled'], yerr = labSTDVs, color = 'slategrey')
