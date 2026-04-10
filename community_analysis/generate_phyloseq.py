@@ -115,8 +115,8 @@ class parseMetadata():
             splitLineage = lineage.split(';')
             ### splitLineage is a list that can be indexed to get any taxonomic rank in the lineage
             ### Index 5 corresponds to genera 
-            lineageDict[isolate] = splitLineage[5]
-            fullLineageDict[isolate] = splitLineage
+            lineageDict[isolate] = splitLineage[5].split('__')[1]
+            fullLineageDict[isolate] = [tax.split('__')[1] for tax in splitLineage]
         return lineageDict, fullLineageDict
 
 class generatePhyloseqObjData():
@@ -157,7 +157,7 @@ class generatePhyloseqObjData():
         taxonomyTable : pandas.DataFrame
             Taxonomy table for phyloseq object
         """
-        df = pd.read_csv(fileName, sep = '\t', usecols = ['PSMId', 'MS2IsotopicAbundances', 'Proteins', 'FileName'])
+        df = pd.read_csv(fileName, sep = '\t', usecols = ['PSMId', 'MS1IsotopicAbundances', 'Proteins', 'FileName'])
 
         ### Need to remove unlabeled samples from data when making labeled OTU and taxonomy tables
         if status == 'L':
@@ -168,16 +168,16 @@ class generatePhyloseqObjData():
         abundData = []
         taxData = []
         aeData = []
-        for psm, ms2, protein, sample in df.itertuples(index = False):
+        for psm, ms1, protein, sample in df.itertuples(index = False):
             stripProtein = protein.lstrip('{').rstrip('}')
             sampName = self.sampleNamingDict.get(sample)
-            if stripProtein.startswith('MGYG'):
+            if stripProtein.startswith('MGYG') and 'C' in sampName:
                 splitProtein = stripProtein.split(',')[0].split('_')
                 taxonName = self.isolateDict.get(splitProtein[0])
                 taxonLineage = self.isolateLineageDict.get(splitProtein[0])
                 abundData.append([taxonName, sampName])
                 taxData.append([taxonName, *taxonLineage])
-                aeData.append([taxonName, ms2, sampName])
+                aeData.append([taxonName, ms1, sampName])
 
         otuTablsDf = pd.DataFrame(abundData, columns = ['Taxon', 'Sample'])
         ### Assume each row = 1 spectral count
@@ -186,7 +186,7 @@ class generatePhyloseqObjData():
         OTUTable.columns = OTUTable.columns.droplevel()
 
         aeOTUDf = pd.DataFrame(aeData, columns = ['Taxon', 'Enrichment', 'Sample'])
-        gbaeOTUDf = aeOTUDf.groupby(['Taxon', 'Sample']).mean().reset_index()
+        gbaeOTUDf = aeOTUDf.groupby(['Taxon', 'Sample'], sort = False).mean().reset_index()
         aeOTUTable = pd.pivot_table(gbaeOTUDf, index = 'Taxon', columns = 'Sample', aggfunc = 'mean', sort = False).fillna(0) 
         aeOTUTable.columns = aeOTUTable.columns.droplevel()
 
@@ -217,7 +217,6 @@ class generatePhyloseqObjData():
             time = splitName[0][1::]
             metadata.append([sampleName, group, sampleType, replicate, time])
         metadataDf = pd.DataFrame(metadata, columns = ['Sample', 'Group', 'SampleType', 'Replicate', 'Time']).drop_duplicates('Sample').set_index('Sample')
-        
         ### Can't include unlabeled (0 hour) samples in labeled metadata table
         if labelStatus == 'L':
             metadataDf = metadataDf[metadataDf["Time"] != "0"]
