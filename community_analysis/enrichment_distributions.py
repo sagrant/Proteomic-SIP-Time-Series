@@ -216,9 +216,7 @@ class communityEnrichment():
         labels = legendDf['Labels'].values.tolist()
 
         plt.legend(handles, labels, bbox_to_anchor=(1.19,7), title='Mouse', fontsize = 10)
-        # plt.show()
-        plt.savefig('ult_plots/enrichment_distributions_ult.png', dpi = 300)
-
+        plt.show()
 
 def main():
     parser = argparse.ArgumentParser()
