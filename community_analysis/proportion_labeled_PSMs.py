@@ -27,6 +27,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import os
 
 class calculateProportions():
@@ -133,8 +134,7 @@ class calculateProportions():
         sampleData : pandas.DataFrame
             Contains proportions of labeled and unlabeled PSMs, as well as total count
         """
-        gbGroup = sampleData.groupby('Group', sort = False).mean()
-
+        gbGroup = sampleData.groupby('Group', sort = False).mean().drop(['Total_PSMs', 'Labeled_PSMs', 'Unlabeled_PSMs', 'Proportion_Unlabeled'], axis = 1)
         fig, axs = plt.subplots()
 
         labSTDVs = []
@@ -142,15 +142,25 @@ class calculateProportions():
             stdv_lab = np.std(groupData[1]['Proportion_Labeled'])
             labSTDVs.append(stdv_lab)
 
-        axs.bar(list(range(len(gbGroup.index))), gbGroup['Proportion_Labeled'], yerr = labSTDVs, color = 'slategrey')
-        axs.set_xticks(list(range(len(gbGroup.index))))
-        axs.set_xticklabels(gbGroup.index)
+        for idx, ((grp, proportionLab), err) in enumerate(zip(gbGroup.itertuples(), labSTDVs)):
+            if 'C' in grp:
+                axs.bar(idx, proportionLab, yerr = err, color = 'lightslategray')
+            if 'S' in grp:
+                axs.bar(idx, proportionLab, yerr = err, color = 'tan')
+
+        axs.set_xticks([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        axs.set_xticklabels(['0h', '6h', '12h', '18h', '24h', '0h', '6h', '12h', '18h', '24h'])
         axs.set_title("Mean Proportion of Labeled PSMs")
-        axs.set_xlabel("Treatment Group")
+        axs.set_xlabel("Time Point")
         axs.set_ylabel("Mean Proportion")
 
+        cecum = mlines.Line2D([], [], color='lightslategray', marker='s', linestyle='None', markersize=10, label='Cecum')
+        stool = mlines.Line2D([], [], color='tan', marker='s', linestyle='None', markersize=10, label='Stool')
+        plt.legend(handles=[cecum, stool])
+
         plt.tight_layout()
-        plt.show()
+        # plt.show()
+        plt.savefig('mean_proportion_labeled_PSMs.png', dpi = 300)
 
     def generateProportionsOut(self, countData, sampleTypesDict, timePointsDict):
         countData = countData.drop(['Labeled_PSMs', 'Unlabeled_PSMs', 'Proportion_Unlabeled'], axis = 1)
