@@ -134,26 +134,19 @@ class generateTraitData():
         return computedData
     
     def parsePercolatorOut(self, namesDict, taxDict, sstatDict):
-        abundData = []
-        enrichmentValues = []
+        labeledTaxa = []
         for psm, enrichment1, enrichment2, protein, sample in self.percData.itertuples(index = False):
             stripProtein = protein.lstrip('{').rstrip('}')
             sampleName = namesDict.get(sample)
             stat = sstatDict.get(sampleName)
             if stripProtein.startswith('MGYG') and stat != 'Unlabeled':
-                if enrichment1 >= 2 and enrichment2 >= 2 and enrichment1 <= 100:
-                    splitProtein = stripProtein.split(',')[0].split('_')[0]
-                    taxonName = taxDict.get(splitProtein)
-                    abundData.append(taxonName)
-                    enrichmentValues.append([taxonName, enrichment1])
-                    
-        abundanceDataDf = pd.DataFrame(abundData).rename(columns = {0:'Genus'})
-        enrichDataDf = pd.DataFrame(enrichmentValues).rename(columns = {0: 'Genus', 1: 'Enrichment'})
-        labeledSpectralCountDf = generateTraitData.computeSpectralCounts(abundanceDataDf, 'Labeled_Spectral_Count', 'SC')
-        avgEnrichmentDf = generateTraitData.computeSpectralCounts(enrichDataDf, 'Average_Enrichment', 'AE')
+                splitProtein = stripProtein.split(',')[0].split('_')[0]
+                taxonName = taxDict.get(splitProtein)
+                labeledTaxa.append([taxonName, 1])
 
-        mergeLabeled = labeledSpectralCountDf.merge(avgEnrichmentDf.reset_index(), on = 'Genus',  how = 'outer')
-        return mergeLabeled
+        labeledTaxaDf = pd.DataFrame(labeledTaxa, columns=['Genus', 'LabStat'])
+        gbGenus = labeledTaxaDf.groupby('Genus').mean().reset_index()
+        return gbGenus
 
     def parseSiprosData(self, taxonomyDict, k0Dict, keggFunctDict, labeledDf):
         """
@@ -294,8 +287,8 @@ def main():
     concatDf = pd.concat(dfs)
 
     traitDataGenerate = generateTraitData(concatDf, pDf)
-    merged13Cdata = traitDataGenerate.parsePercolatorOut(sampDict, lingDict, sstDict)
-    traitData, sampleFunctionData, present = traitDataGenerate.parseSiprosData(lingDict, k0sLookupDict, k0sFunctionDict, merged13Cdata)
+    labeledData = traitDataGenerate.parsePercolatorOut(sampDict, lingDict, sstDict)
+    traitData, sampleFunctionData, present = traitDataGenerate.parseSiprosData(lingDict, k0sLookupDict, k0sFunctionDict, labeledData)
     geneCounts = traitDataGenerate.countRelevantGenes(k0sDf, lingDict, list(present), k0sFunctionDict)
     outData = traitData.merge(geneCounts, on = 'Genus', how = 'outer').fillna(0)
     

@@ -276,10 +276,8 @@ class plotGenera():
         for i1, (taxon) in enumerate(plotTaxa):
             # get series with average enrichment for each taxon
             enrichmentData = self.averageEnrichmentData.loc[taxon] 
-            # print(enrichmentData)
             # get series with sum spectral counts for each taxon
             countData = self.spectralCountData.loc[taxon] 
-            # print(countData)
             ylocs.append(i1) 
             ylabs.append(taxon)
             ### iterate over each series with enrichment or spectral count data of all samples
