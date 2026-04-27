@@ -24,6 +24,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def sampleMetadata(namesDict):
     """
@@ -130,7 +131,7 @@ class communityEnrichment():
         df = df.sort_values(by = 'Mouse')
         return df
 
-    def generateColorMap(self, mouseList):
+    def generateColorMap(self, groupList):
         """
         Make custom color map so all mice are assoicated with one color on plot
         
@@ -147,24 +148,13 @@ class communityEnrichment():
         colors = [
             "lightblue",
             "slategrey",
-            "yellowgreen",
-            "forestgreen",
-            "blue",
-            "firebrick",
-            "darkgoldenrod",
-            "darkorange",
-            "orangered",
-            "darkmagenta",
-            "maroon",
-            "saddlebrown",
-            "palevioletred",
+            "dodgerblue",
             "teal",
-            "magenta",
-            "thistle"]
-        mouseColMap = {}
-        for mouse, color in zip(mouseList, colors):
-            mouseColMap[mouse] = color
-        return mouseColMap
+            "navy",]
+        colMap = {}
+        for timePointGroup, color in zip(groupList, colors):
+            colMap[timePointGroup] = color
+        return colMap
     
     def plotEnrichmentDistributions(self, enrichData, colorDict):
         """
@@ -181,41 +171,23 @@ class communityEnrichment():
             Color dict used to map colors to specific mice
         """
         fig, ax = plt.subplots(5, 1, figsize = (7, 8))
-        plt.subplots_adjust(left = 0.09, bottom = 0.06, top = 0.95, right = 0.85, hspace=0.5)
+        plt.subplots_adjust(left = 0.11, bottom = 0.06, top = 0.95, right = 0.95, hspace=0.5)
 
-        enrichData['Color'] = enrichData['Mouse'].map(colorDict)
+        enrichData['Color'] = enrichData['Group'].map(colorDict)
         ### plot each group, each with 3 mice, on its own subplot
+
         gbGroup = enrichData.groupby('Group', sort = False)
 
         for (groupName, enrichmentValueData), axis in zip(gbGroup, ax.flatten()):
+            concatGroupValues = np.concatenate(enrichmentValueData['Values'].values)
             for values, samp, gp, mouse, colr in enrichmentValueData.itertuples(index = False):
-                axis.hist(values, bins = 50, alpha = 0.9, log = True, label = mouse, color = colr, histtype = 'step', linewidth = 1.3)
-                axis.set_title(gp)
+                panelName = f'{gp[1::]} hrs'
+                sns.kdeplot(concatGroupValues, ax = axis, color = colr, linewidth=1.3, bw_adjust=0.27, clip=(0, 100))
+                axis.set_title(panelName)
                 axis.set_xticks([0, 20, 40, 60, 80, 100])
                 axis.set_xlim(0,103)
-                axis.set_ylim(1, 150)
         
         ax[4].set_xlabel('Enrichment (%)')
-        ax[2].set_ylabel(r'$\mathrm{Log}_{10}$ PSM Count')
-
-        ### Generate legend so there are no duplicate entries 
-        ### and mice are listed in chronological order
-        legendInfo = []
-        legendOrder = {}
-        for i, a in enumerate(ax.ravel()):
-            h, l = a.get_legend_handles_labels()
-            l.sort()
-            for hand, lab in zip(h, l):
-                if lab not in legendInfo:
-                    legendOrder[lab] = i
-                    legendInfo.append([hand, lab])
-        legendDf = pd.DataFrame(legendInfo, columns = ['Handles', 'Labels']).drop_duplicates('Labels')
-        legendDf['Order'] = legendDf['Labels'].map(legendOrder)
-        legendDf = legendDf.sort_values(by = 'Order')
-        handles = legendDf['Handles'].values.tolist()
-        labels = legendDf['Labels'].values.tolist()
-
-        plt.legend(handles, labels, bbox_to_anchor=(1.19,7), title='Mouse', fontsize = 10)
         plt.show()
 
 def main():
@@ -244,7 +216,7 @@ def main():
     community13C = communityEnrichment(dfs)
     subsampleValue = community13C.calculateSubsampleSize(cLines)
     data = community13C.parse13CEnrichment(subsampleValue)
-    colorProfile = community13C.generateColorMap(data['Mouse'].unique())
+    colorProfile = community13C.generateColorMap(data['Group'].unique())
     community13C.plotEnrichmentDistributions(data, colorProfile)
     
 if __name__ == "__main__":
